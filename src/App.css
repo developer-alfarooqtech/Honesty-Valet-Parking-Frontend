@@ -1,0 +1,53 @@
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: tranblueY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: tranblueY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Fade Out Animation */
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: tranblueY(0);
+  }
+  to {
+    opacity: 0;
+    transform: tranblueY(-20px);
+  }
+}
+
+.animate-fade-out {
+  animation: fadeOut 0.3s ease-in forwards;
+}
+/* For the toggle switch animation */
+@keyframes toggleOn {
+  0% { transform: tranblueX(0); }
+  50% { transform: tranblueX(8px); }
+  100% { transform: tranblueX(6px); }
+}
+
+@keyframes toggleOff {
+  0% { transform: tranblueX(6px); }
+  50% { transform: tranblueX(-2px); }
+  100% { transform: tranblueX(0); }
+}
+
+.toggle-on {
+  animation: toggleOn 0.2s ease-out forwards;
+}
+
+.toggle-off {
+  animation: toggleOff 0.2s ease-out forwards;
+}
+
+
+
