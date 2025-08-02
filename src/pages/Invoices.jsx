@@ -16,7 +16,7 @@ import InvoiceRepaymentModal from "../components/Invoice_comp/InvoiceRepaymentMo
 import InvoicesList from "../components/Invoice_comp/InvoicesList";
 import UpdateExpDateModal from "../components/Invoice_comp/UpdateExpDateModal";
 import InvoiceStats from "../components/Invoice_comp/InvoiceStats";
-import { printMultipleInvoices } from "../components/Invoice_comp/PrintInv";
+import { printMultipleInvoices, printLargeInvoiceBatch } from "../components/Invoice_comp/PrintInv";
 import ConfirmationModal from "../components/SalesOrder_comp/ConfirmationModal";
 import ProductNoteModal from "../components/SalesOrder_comp/ProductNoteModal";
 
@@ -262,20 +262,30 @@ const Invoices = () => {
               </button>
 
               <button
-                onClick={() => printMultipleInvoices({
-                  selectedInvoices,
-                  setPrintingInvoices
-                })}
+                onClick={() => {
+                  // Automatically choose the appropriate printing method based on quantity
+                  if (selectedInvoices.length > 30) {
+                    printLargeInvoiceBatch({
+                      selectedInvoices,
+                      setPrintingInvoices
+                    });
+                  } else {
+                    printMultipleInvoices({
+                      selectedInvoices,
+                      setPrintingInvoices
+                    });
+                  }
+                }}
                 disabled={selectedInvoices.length === 0 || printingInvoices}
                 className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-all duration-300 ${
                   selectedInvoices.length > 0 && !printingInvoices
                     ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg"
                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
-                title="Print selected invoices"
+                title={`Print selected invoices${selectedInvoices.length > 30 ? ' (Large batch mode)' : ''}`}
               >
                 <Printer size={16} />
-                <span>{printingInvoices ? "Printing..." : "Print Invoices"}</span>
+                <span>{printingInvoices ? "Printing..." : `Print Invoices${selectedInvoices.length > 30 ? ' (Batch)' : ''}`}</span>
               </button>
             </div>
           </div>
@@ -316,23 +326,43 @@ const Invoices = () => {
                     {selectedInvoices.length}
                   </span>{" "}
                   <span className="text-blue-600">invoice(s) selected</span>
+                  {selectedInvoices.length > 30 && (
+                    <div className="text-xs text-orange-600 mt-1">
+                      Large batch detected - will use optimized printing mode
+                    </div>
+                  )}
+                  {selectedInvoices.length > 6 && selectedInvoices.length <= 30 && (
+                    <div className="text-xs text-blue-500 mt-1">
+                    
+                    </div>
+                  )}
                 </div>
                 
                 <button
-                  onClick={() => printMultipleInvoices({
-                    selectedInvoices,
-                    setPrintingInvoices
-                  })}
+                  onClick={() => {
+                    // Automatically choose the appropriate printing method based on quantity
+                    if (selectedInvoices.length > 30) {
+                      printLargeInvoiceBatch({
+                        selectedInvoices,
+                        setPrintingInvoices
+                      });
+                    } else {
+                      printMultipleInvoices({
+                        selectedInvoices,
+                        setPrintingInvoices
+                      });
+                    }
+                  }}
                   disabled={printingInvoices}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
                     !printingInvoices
                       ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl"
                       : "bg-gray-300 text-gray-500 cursor-not-allowed"
                   }`}
-                  title="Print selected invoices"
+                  title={`Print selected invoices${selectedInvoices.length > 30 ? ' (Large batch mode)' : ''}`}
                 >
                   <Printer size={18} />
-                  <span>{printingInvoices ? "Printing..." : "Print Selected Invoices"}</span>
+                  <span>{printingInvoices ? "Printing..." : `Print Selected Invoices${selectedInvoices.length > 30 ? ' (Batch)' : ''}`}</span>
                 </button>
               </div>
             </div>
