@@ -3,7 +3,7 @@ import { Eye, Download } from 'lucide-react';
 
 const RecentInvoicesTable = ({ invoices }) => {
   const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', {
+    return new Date(date).toLocaleDateString('en-AE', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -11,7 +11,7 @@ const RecentInvoicesTable = ({ invoices }) => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-AE', {
       style: 'currency',
       currency: 'AED'
     }).format(amount);
@@ -33,7 +33,7 @@ const RecentInvoicesTable = ({ invoices }) => {
                 Customer
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                Amount
+                Amount Paid
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                 Balance
@@ -56,7 +56,7 @@ const RecentInvoicesTable = ({ invoices }) => {
                   {invoice.customer?.name || 'N/A'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {formatCurrency(invoice.finalAmount)}
+                  {formatCurrency(invoice.totalPayedAmount)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {formatCurrency(invoice.balanceToReceive)}

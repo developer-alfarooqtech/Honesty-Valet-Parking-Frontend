@@ -55,7 +55,7 @@ const SalesReport = ({ dateRange, handleDownloadReport, isDownloading }) => {
       <div className="flex justify-between">
         <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
           <ShoppingCart className="text-blue-500" size={24} />
-          Sales Order Report
+          Invoices Report
         </h3>
         <div className="flex justify-end mb-3">
           <button
@@ -71,23 +71,23 @@ const SalesReport = ({ dateRange, handleDownloadReport, isDownloading }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
-          <div className="text-sm text-gray-600">Total Sales Order value</div>
+          <div className="text-sm text-gray-600">Total Invoice value</div>
           <div className="text-2xl font-bold text-blue-600">
             AED {data.totalSales.toLocaleString()}
           </div>
         </div>
         <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
-          <div className="text-sm text-gray-600">Total Orders</div>
+          <div className="text-sm text-gray-600">Total Invoices</div>
           <div className="text-2xl font-bold text-blue-600">
             {data.totalOrders}
           </div>
         </div>
-        <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg">
+        {/* <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg">
           <div className="text-sm text-gray-600">Avg Order Value</div>
           <div className="text-2xl font-bold text-green-600">
             AED {data.averageOrderValue}
           </div>
-        </div>
+        </div> */}
       </div>
 
       <p className="text-sm text-gray-500 mb-2">

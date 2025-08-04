@@ -419,7 +419,6 @@ const printInvoiceDirectly = (invoice) => {
     
   } catch (error) {
     // Popup blocked or other error, use current window method
-    console.log("Popup blocked, using fallback method");
     toast.loading("Preparing invoice for printing...", { id: 'single-print' });
     
     printAllInvoicesInCurrentWindow([invoice]).then(() => {

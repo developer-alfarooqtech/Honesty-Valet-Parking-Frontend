@@ -28,9 +28,8 @@ const InvoiceForm = ({
             type="date"
             className="w-full border border-blue-200 p-3 rounded-lg focus:ring-2 focus:ring-blue-300 focus:border-blue-300 outline-none transition-all"
             value={selectedDate}
-            onChange={(date) => setSelectedDate(date)}
-            dateFormat="dd/MM/yyyy"
-            placeholderText="dd/mm/yyyy"
+            onChange={(e) => setSelectedDate(e.target.value)}
+        
           />
         </div>
 

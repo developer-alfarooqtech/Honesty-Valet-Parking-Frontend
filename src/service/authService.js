@@ -25,7 +25,6 @@ export const authAPI = {
   async register(userData) {
     try {
       const response = await api.post('/auth/register', userData);
-      console.log('Registration successful');
       return response;
     } catch (error) {
       console.error('Registration error:', error.response?.data || error.message);
@@ -48,7 +47,6 @@ export const authAPI = {
   async logout() {
     try {
       const response = await api.post('/auth/logout');
-      console.log('Logout successful');
       return response;
     } catch (error) {
       console.error('Logout error:', error.response?.data || error.message);
@@ -60,7 +58,6 @@ export const authAPI = {
   async refreshToken() {
     try {
       const response = await api.post('/auth/refresh-token');
-      console.log('Token refreshed successfully');
       return response;
     } catch (error) {
       console.error('Token refresh error:', error.response?.data || error.message);

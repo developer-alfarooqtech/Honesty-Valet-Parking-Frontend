@@ -45,8 +45,6 @@ const FilterBar = ({ categories, departments, filters, onFilterChange }) => {
             value={filters.startDate}
             onChange={(e) => onFilterChange({ ...filters, startDate: e.target.value })}
             className="w-full px-3 py-2 border text-gray-700 border-blue-500 rounded-md"
-            dateFormat="dd/MM/yyyy"
-            placeholderText="dd/mm/yyyy"
           />
         </div>
 
@@ -61,8 +59,7 @@ const FilterBar = ({ categories, departments, filters, onFilterChange }) => {
             value={filters.endDate}
             onChange={(e) => onFilterChange({ ...filters, endDate: e.target.value })}
             className="w-full px-3 py-2 border text-gray-700 border-blue-500 rounded-md"
-            dateFormat="dd/MM/yyyy"
-            placeholderText="dd/mm/yyyy"
+     
           />
         </div>
 

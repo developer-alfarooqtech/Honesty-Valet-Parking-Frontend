@@ -132,7 +132,6 @@ const CreditNotes = () => {
       });
       
       const data = response.data;
-      console.log(data,'data stats')
       if (data.success && data.data) {
         // Backend returns stats in data.data, not data.stats
         setStats({
@@ -429,10 +428,10 @@ const CreditNotes = () => {
           </div>
         )}
 
-        {view === "list" ? (
+        {view === "list" ? (  
           <>
             {/* Enhanced Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <div className="bg-white rounded-xl border border-blue-200 p-6 shadow-lg">
                 <div className="flex items-center justify-between">
                   <div>
@@ -481,7 +480,7 @@ const CreditNotes = () => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl border border-blue-200 p-6 shadow-lg">
+              {/* <div className="bg-white rounded-xl border border-blue-200 p-6 shadow-lg">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-blue-500 uppercase tracking-wide">Invoice Credits</p>
@@ -491,8 +490,8 @@ const CreditNotes = () => {
                     <FileText className="w-6 h-6 text-blue-600" />
                   </div>
                 </div>
-              </div>
-
+              </div> */}
+{/* 
               <div className="bg-white rounded-xl border border-blue-200 p-6 shadow-lg">
                 <div className="flex items-center justify-between">
                   <div>
@@ -503,7 +502,7 @@ const CreditNotes = () => {
                     <Edit className="w-6 h-6 text-purple-600" />
                   </div>
                 </div>
-              </div>
+              </div> */}
             </div>
 
             {/* Search and Filters */}

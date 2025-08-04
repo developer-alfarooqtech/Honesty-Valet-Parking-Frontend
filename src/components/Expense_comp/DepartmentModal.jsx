@@ -89,8 +89,7 @@ const DepartmentModal = ({ onClose, onSubmit }) => {
                 (e) => setFormData({ ...formData, date:e.target.value }) // set the date directly
               }
               className="w-full px-3 py-2 border border-blue-500 text-gray-600 rounded-md"
-              dateFormat="dd/MM/yyyy"
-              placeholderText="dd/mm/yyyy"
+        
               required
             />
           </div>

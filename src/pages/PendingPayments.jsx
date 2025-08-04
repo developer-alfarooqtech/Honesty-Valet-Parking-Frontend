@@ -374,8 +374,7 @@ const PendingPayments = () => {
                 value={filters.startDate}
                 onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                dateFormat="dd/MM/yyyy"
-                placeholderText="dd/mm/yyyy"
+             
               />
             </div>
           </div>
@@ -391,8 +390,7 @@ const PendingPayments = () => {
                 value={filters.endDate}
                 onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                dateFormat="dd/MM/yyyy"
-                placeholderText="dd/mm/yyyy"
+            
               />
             </div>
           </div>

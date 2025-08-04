@@ -312,8 +312,7 @@ const BankStatements = () => {
                 value={filters.dateFrom}
                 onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                dateFormat="dd/MM/yyyy"
-                placeholderText="dd/mm/yyyy"
+               
               />
             </div>
 
@@ -327,8 +326,7 @@ const BankStatements = () => {
                 value={filters.dateTo}
                 onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                dateFormat="dd/MM/yyyy"
-                placeholderText="dd/mm/yyyy"
+       
               />
             </div>
           </div>

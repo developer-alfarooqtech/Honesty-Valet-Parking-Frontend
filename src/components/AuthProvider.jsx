@@ -12,7 +12,6 @@ const AuthProvider = ({ children }) => {
 
   const checkAuth = async () => {
     if (!token) {
-      console.log('No token, skipping fetch');
       await dispatch(logoutUser()).unwrap();
       setAuthChecked(true);
       return;

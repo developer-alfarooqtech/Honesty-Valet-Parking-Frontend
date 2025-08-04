@@ -2,7 +2,6 @@
 import axios from "axios";
 
 const API_URL = import.meta.env.VITE_BASEURL
-console.log("API URL:", API_URL);
 
 // Create axios instance optimized for the login flow
 const api = axios.create({

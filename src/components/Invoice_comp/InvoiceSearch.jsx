@@ -41,9 +41,7 @@ const InvoiceSearch = ({ onInvoiceSelect, selectedInvoice, onClearInvoice, custo
 
       setIsLoading(true);
       try {
-        console.log('Searching for invoices with term:', debouncedSearchTerm, 'customerId:', customerId);
         const response = await fetchInvoicesForCreditNote(debouncedSearchTerm, customerId);
-        console.log('Invoice search response:', response.data);
         
         // Updated to match the actual API response structure
         if (response.data.success && response.data.invoices) {

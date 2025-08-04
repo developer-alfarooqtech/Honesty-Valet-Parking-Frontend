@@ -79,7 +79,6 @@ const SalesOrders = () => {
     // Find the JC value from the empty row
     const row = emptyRows.find((r) => r.id === rowId);
     const jcValue = row && row.jc ? row.jc : "";
-    console.log("JC Value:", jcValue);
     if (itemType) {
       // Product selected
       handleProductSelect({ ...item, jc: jcValue });
