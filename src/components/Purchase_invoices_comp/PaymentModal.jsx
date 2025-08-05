@@ -122,8 +122,7 @@ const PaymentModal = ({ invoice, onClose, onPaymentComplete }) => {
                   onChange={(e) => setFormData({ ...formData, date:e.target.value })}
                   className="block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                   required
-                  dateFormat="dd/MM/yyyy"
-                  placeholderText="dd/mm/yyyy"
+        
                 />
               </div>
 

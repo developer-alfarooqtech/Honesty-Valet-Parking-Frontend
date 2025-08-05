@@ -201,8 +201,7 @@ const Report = () => {
                   value={dateRange.start}
                   onChange={(e) =>setDateRange({ ...dateRange, start: e.target.value })}
                   className="text-sm border-none outline-none"
-                  dateFormat="dd/MM/yyyy"
-                  placeholderText="dd/mm/yyyy"
+              
                 />
                 <span className="text-gray-400">to</span>
                 <input
@@ -210,8 +209,7 @@ const Report = () => {
                   value={dateRange.end}
                   onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
                   className="text-sm border-none outline-none"
-                  dateFormat="dd/MM/yyyy"
-                  placeholderText="dd/mm/yyyy"
+                 
                 />
               </div>
 

@@ -166,7 +166,7 @@ const Dashboard = () => {
         </div>
 
         {/* Sales Order Stats */}
-        <div className="mb-8">
+        {/* <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-800 mb-6">
             Sales Performance
           </h2>
@@ -190,7 +190,7 @@ const Dashboard = () => {
               sub="In Percentage"
             />
           </div>
-        </div>
+        </div> */}
 
         {/* Charts Row */}
         <div className="mb-8">

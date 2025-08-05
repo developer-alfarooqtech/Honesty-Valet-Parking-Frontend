@@ -141,8 +141,7 @@ const PaymentModal = ({ payments, onClose, onSuccess }) => {
                       onChange={(date) => setPaymentDate(date)}
                       className="w-full p-3 pl-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       required
-                      dateFormat="dd/MM/yyyy"
-                      placeholderText="dd/mm/yyyy"
+                    
                     />
                     <Calendar className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
                   </div>
