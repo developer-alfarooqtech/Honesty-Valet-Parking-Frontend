@@ -273,6 +273,7 @@ const ProductsAndServices = () => {
       loadProducts();
     } catch (error) {
       console.error("Error adding product:", error);
+      toast.error(error?.response?.data?.message || error.message || "Failed to add product");
       throw error;
     }
   };
@@ -284,6 +285,7 @@ const ProductsAndServices = () => {
       loadServices();
     } catch (error) {
       console.error("Error adding service:", error);
+      toast.error(error?.response?.data?.message || error.message || "Failed to add service");
       throw error;
     }
   };
