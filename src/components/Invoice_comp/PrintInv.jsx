@@ -903,6 +903,7 @@ const generateInvoiceHTML = (invoice) => {
         <div class="flex-1">
           <div class="text-right mb-2">
             <h2 class="text-lg font-bold text-blue-700">Invoice: ${invoice?.name || "-"}</h2>
+            ${invoice?.lpo ? `<p class="text-sm font-semibold text-blue-500">LPO: ${invoice.lpo}</p>` : ''}
             <p class="text-sm text-gray-500">Date: ${new Date(invoice.date).toLocaleDateString("en-GB")}</p>
             <p class="text-sm text-gray-500">Due Date: ${new Date(invoice.expDate).toLocaleDateString("en-GB")}</p>
           </div>

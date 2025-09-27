@@ -43,6 +43,7 @@ export const useInvoiceLogic = () => {
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedCredits, setSelectedCredits] = useState([]);
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split("T")[0]);
+  const [lpo, setLpo] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
   const [vatRate, setVatRate] = useState(5);
@@ -304,6 +305,7 @@ export const useInvoiceLogic = () => {
       // Format data for Excel
       const worksheetData = invoices.map((inv) => ({
         "Invoice Number": inv.name || "N/A",
+        "LPO": inv.lpo || "N/A",
         "Customer Name": inv.salesOrderId?.customer?.name || inv.customer?.name || "N/A",
         "Invoice Date": formatDate(inv?.date || inv?.createdAt),
         "Last Updated": formatDate(inv?.updatedAt),
@@ -457,12 +459,13 @@ export const useInvoiceLogic = () => {
     exportingPDF, setExportingPDF,
     printingInvoices, setPrintingInvoices,
     exportingExcel, setExportingExcel,
-    selectedCustomerForInvoice, setSelectedCustomerForInvoice,
-    selectedProducts, setSelectedProducts,
-    selectedServices, setSelectedServices,
-    selectedCredits, setSelectedCredits,
-    invoiceDate, setInvoiceDate,
-    description, setDescription,
+  selectedCustomerForInvoice, setSelectedCustomerForInvoice,
+  selectedProducts, setSelectedProducts,
+  selectedServices, setSelectedServices,
+  selectedCredits, setSelectedCredits,
+  invoiceDate, setInvoiceDate,
+  lpo, setLpo,
+  description, setDescription,
     error, setError,
     vatRate, setVatRate,
     discount, setDiscount,

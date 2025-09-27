@@ -24,6 +24,7 @@ const ProfitLossReport = ({
         endDate: dateRange.end,
       });
       setData(response.data);
+
     } catch (err) {
       setError("Failed to load profit & loss data");
     } finally {

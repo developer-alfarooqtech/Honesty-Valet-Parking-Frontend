@@ -448,8 +448,9 @@ const InvoiceDetailModal = ({
                   <InfoRow icon={Calendar} label="Date" value={formatDate(currentInvoice.date)} />
                   <InfoRow icon={Calendar} label="Expiry Date" value={formatDate(currentInvoice.expDate)} />
                   <InfoRow icon={Calendar} label="Created" value={formatDate(currentInvoice.createdAt)} />
-                  
-          
+                  {currentInvoice.lpo && (
+                    <InfoRow icon={IdCard} label="LPO" value={currentInvoice.lpo} />
+                  )}
                 </div>
               </InfoCard>
 

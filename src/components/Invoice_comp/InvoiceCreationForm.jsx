@@ -5,14 +5,16 @@ import toast from "react-hot-toast";
 import CustomerSelector from "../SalesOrder_comp/CustomerSelector";
 import InlineItemSelector from "./InlineItemSelector";
 import BatchSelectionModal from "../SalesOrder_comp/BatchSelectionModal";
-
 const InvoiceCreationForm = ({
+  // ...existing code...
   isEditMode,
   editingInvoice,
   selectedCustomerForInvoice,
   handleCustomerSelectForInvoice,
   invoiceDate,
   setInvoiceDate,
+  lpo,
+  setLpo,
   itemType,
   setItemType,
   selectedProducts,
@@ -56,6 +58,13 @@ const InvoiceCreationForm = ({
   const productServiceSectionRef = useRef(null);
   const submitButtonRef = useRef(null);
   const dateInputRef = useRef(null);
+
+  // Prefill LPO when editing
+  useEffect(() => {
+    if (isEditMode && editingInvoice && editingInvoice.lpo) {
+      setLpo(editingInvoice.lpo);
+    }
+  }, [isEditMode, editingInvoice, setLpo]);
 
   // Keyboard navigation handler
   const handleFormKeyDown = (e) => {
@@ -139,14 +148,14 @@ const InvoiceCreationForm = ({
         />
       </div>
 
-      {/* Invoice Date Section */}
+      {/* Invoice Date & LPO Section */}
       <div className="mb-8">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-          Invoice Date
+          Invoice Date & LPO
           <span className="ml-2 text-xs text-blue-500 font-normal">(F2)</span>
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <label htmlFor="invoice-date" className="block text-sm font-medium text-gray-700 mb-2">
               Invoice Date
@@ -158,6 +167,20 @@ const InvoiceCreationForm = ({
               onChange={(e) => setInvoiceDate(e.target.value)}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-700 transition-all duration-200"
               ref={dateInputRef}
+            />
+          </div>
+          <div>
+            <label htmlFor="lpo" className="block text-sm font-medium text-gray-700 mb-2">
+              LPO
+            </label>
+            <input
+              id="lpo"
+              type="text"
+              value={lpo || ""}
+              onChange={(e) => setLpo(e.target.value)}
+              className={`w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-700 transition-all duration-200 ${isEditMode ? '' : ''}`}
+              placeholder="Enter LPO number/reference"
+              disabled={false}
             />
           </div>
         </div>

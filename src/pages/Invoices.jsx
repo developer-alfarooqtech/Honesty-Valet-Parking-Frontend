@@ -417,6 +417,8 @@ const Invoices = () => {
           handleCustomerSelectForInvoice={handleCustomerSelectForInvoice}
           invoiceDate={invoiceDate}
           setInvoiceDate={invoiceLogic.setInvoiceDate}
+          lpo={invoiceLogic.lpo}
+          setLpo={invoiceLogic.setLpo}
           itemType={itemType}
           setItemType={invoiceLogic.setItemType}
           selectedProducts={selectedProducts}

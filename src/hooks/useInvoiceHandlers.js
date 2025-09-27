@@ -25,6 +25,7 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     selectedServices, setSelectedServices,
     selectedCredits, setSelectedCredits,
     invoiceDate, setInvoiceDate,
+    lpo, setLpo,
     description, setDescription,
     error, setError,
     vatRate, setVatRate,
@@ -644,18 +645,19 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     }));
 
     const invoiceData = {
-      customer: selectedCustomerForInvoice._id,
-      products: productsForInvoice,
-      services: servicesForInvoice,
-      credits: creditsForInvoice,
-      netAmount,
-      vatRate,
-      vatAmount,
-      subtotal,
-      total: finalTotal,
-      date: invoiceDate,
-      description: trimmedDescription,
-      discount,
+  customer: selectedCustomerForInvoice._id,
+  products: productsForInvoice,
+  services: servicesForInvoice,
+  credits: creditsForInvoice,
+  netAmount,
+  vatRate,
+  vatAmount,
+  subtotal,
+  total: finalTotal,
+  date: invoiceDate,
+  lpo,
+  description: trimmedDescription,
+  discount,
     };
 
     setLoading(true);
@@ -681,19 +683,20 @@ export const useInvoiceHandlers = (invoiceLogic) => {
 
   // Form reset handler
   const resetInvoiceForm = () => {
-    setSelectedCustomerForInvoice(null);
-    setSelectedProducts([]);
-    setSelectedServices([]);
-    setSelectedCredits([]);
-    setInvoiceDate(new Date().toISOString().split("T")[0]);
-    setError("");
-    setDescription("");
-    setDiscount(0);
-    setEditingInvoice(null);
-    setIsEditMode(false);
-    setItemType('service');
-    setEmptyRows([{ id: uuidv4(), searchTerm: "", type: 'service' }]);
-    setCreationOrder([]);
+  setSelectedCustomerForInvoice(null);
+  setSelectedProducts([]);
+  setSelectedServices([]);
+  setSelectedCredits([]);
+  setInvoiceDate(new Date().toISOString().split("T")[0]);
+  setLpo("");
+  setError("");
+  setDescription("");
+  setDiscount(0);
+  setEditingInvoice(null);
+  setIsEditMode(false);
+  setItemType('service');
+  setEmptyRows([{ id: uuidv4(), searchTerm: "", type: 'service' }]);
+  setCreationOrder([]);
   };
 
   return {
