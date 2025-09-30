@@ -94,6 +94,8 @@ const Invoices = () => {
     setShowPendingOnly,
     showCancelledOnly,
     setShowCancelledOnly,
+  sortOrder,
+  setSortOrder,
     // Functions
     calculateTotal,
     downloadPdf,
@@ -232,6 +234,20 @@ const Invoices = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+
+              {/* Sort select - server-side */}
+              <div className="flex items-center ml-3">
+                <label className="mr-2 text-sm text-blue-600">Sort:</label>
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                  className="px-3 py-2 border text-gray-700 border-blue-500 rounded-md"
+                  title="Sort invoices by date"
+                >
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                </select>
+              </div>
 
             {/* Action Buttons */}
             <div className="flex gap-2">

@@ -10,10 +10,11 @@ export const fetchAllInvoices = async ({
   cancelledOnly,
   overdueOnly,
   paymentClearedOnly,
+  sort = 'newest',
   customerId = "",
 }) => {
   return await api.get(
-    `/get-invoices?page=${currentPage}&limit=${limit}&search=${debouncedSearchTerm}&startDate=${startDate}&endDate=${endDate}&overdueOnly=${overdueOnly}&paymentClearedOnly=${paymentClearedOnly}&pendingOnly=${pendingOnly}&cancelledOnly=${cancelledOnly}&customerId=${customerId}`
+    `/get-invoices?page=${currentPage}&limit=${limit}&search=${debouncedSearchTerm}&startDate=${startDate}&endDate=${endDate}&overdueOnly=${overdueOnly}&paymentClearedOnly=${paymentClearedOnly}&pendingOnly=${pendingOnly}&cancelledOnly=${cancelledOnly}&sort=${sort}&customerId=${customerId}`
   );
 };
 
@@ -23,10 +24,11 @@ export const downloadInvoices = async ({
   endDate,
   overdueOnly,
   paymentClearedOnly,
+  sort = 'newest',
   customerId = "",
 }) => {
   return await api.get(
-    `/download-invoices?search=${debouncedSearchTerm}&startDate=${startDate}&endDate=${endDate}&overdueOnly=${overdueOnly}&paymentClearedOnly=${paymentClearedOnly}&customerId=${customerId}`
+    `/download-invoices?search=${debouncedSearchTerm}&startDate=${startDate}&endDate=${endDate}&overdueOnly=${overdueOnly}&paymentClearedOnly=${paymentClearedOnly}&sort=${sort}&customerId=${customerId}`
   );
 };
 

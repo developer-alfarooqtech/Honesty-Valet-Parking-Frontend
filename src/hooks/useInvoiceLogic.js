@@ -60,6 +60,8 @@ export const useInvoiceLogic = () => {
   const [showPaymentClearedOnly, setShowPaymentClearedOnly] = useState(false);
   const [showPendingOnly, setShowPendingOnly] = useState(false);
   const [showCancelledOnly, setShowCancelledOnly] = useState(false);
+  // Server-side sort order: 'newest' or 'oldest'
+  const [sortOrder, setSortOrder] = useState('newest');
 
   // Invoice stats
   const [invoiceStats, setInvoiceStats] = useState({
@@ -163,6 +165,7 @@ export const useInvoiceLogic = () => {
     showPaymentClearedOnly,
     showPendingOnly,
     showCancelledOnly,
+    sortOrder,
     selectedCustomer,
   ]);
 
@@ -248,6 +251,7 @@ export const useInvoiceLogic = () => {
         paymentClearedOnly: showPaymentClearedOnly,
         pendingOnly: showPendingOnly,
         cancelledOnly: showCancelledOnly,
+        sort: sortOrder,
         customerId: selectedCustomer?._id || "",
       });
       const data = await response?.data;
@@ -288,6 +292,7 @@ export const useInvoiceLogic = () => {
         paymentClearedOnly: showPaymentClearedOnly,
         pendingOnly: showPendingOnly,
         cancelledOnly: showCancelledOnly,
+        sort: sortOrder,
         customerId: selectedCustomer?._id || "",
       });
 
@@ -435,6 +440,7 @@ export const useInvoiceLogic = () => {
       showPendingOnly,
       showCancelledOnly,
       selectedCustomer,
+      sortOrder,
       isExpired,
     });
   };
@@ -493,6 +499,7 @@ export const useInvoiceLogic = () => {
     pendingRowId, setPendingRowId,
     noteInputRefs,
     debouncedSearchTerm,
+  sortOrder, setSortOrder,
 
     // Functions
     isExpired,
