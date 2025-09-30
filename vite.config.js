@@ -6,7 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(),tailwindcss()],
   build:{
-    outDir: '../backend/view',
+    outDir: '../Honesty-Valet-Parking-Backend/view',
     emptyOutDir:true,
   },
   server:{
