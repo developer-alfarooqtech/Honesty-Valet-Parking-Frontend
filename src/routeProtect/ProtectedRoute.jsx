@@ -8,14 +8,16 @@ const getPermissionKey = (pathname) => {
     '/': 'dashboard',
     '/customers': 'customers',
     '/products-services': 'products-services',
+    '/sales-orders': 'sales-orders',
     '/bank-statements': 'bank-statements',
     '/pending-payments': 'pending-payments',
-    '/sales-orders': 'sales-orders',
     '/expense': 'expense',
     '/purchase-invoices': 'purchase-invoices',
     '/invoices': 'invoices',
+    '/credit-notes': 'credit-notes',
     '/suppliers': 'suppliers',
     '/salary': 'salary',
+    '/report': 'report',
     // Add more routes and permission keys here
   };
   return routeMap[pathname] || null;

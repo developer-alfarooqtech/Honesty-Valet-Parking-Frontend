@@ -30,7 +30,7 @@ const Sidebar = () => {
     { icon: Store, name: 'Suppliers', path: '/suppliers', permission: 'suppliers' },
     { icon: DollarSignIcon, name: 'Expense', path: '/expense', permission: 'expense' },
     { icon: EuroIcon, name: 'Salary', path: '/salary', permission: 'salary' },
-    { icon: TrendingUp, name: 'Reports', path: '/report', permission: 'purchase-invoices' },
+    { icon: TrendingUp, name: 'Reports', path: '/report', permission: 'report' },
   ];
 
   // Check if user has permission for a specific route

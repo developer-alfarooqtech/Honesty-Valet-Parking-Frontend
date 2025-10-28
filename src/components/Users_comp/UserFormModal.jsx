@@ -15,7 +15,8 @@ const UserFormModal = ({
     dashboard: false,
     customers: false,
     "products-services": false,
-    "credit-note": false,
+    "sales-orders": false,
+    "credit-notes": false,
     "purchase-invoices": false,
     "bank-statements": false,
     "pending-payments": false,
@@ -23,6 +24,7 @@ const UserFormModal = ({
     expense: false,
     suppliers: false,
     salary: false,
+    report: false,
   };
 
   const [formData, setFormData] = useState({
@@ -106,15 +108,16 @@ const UserFormModal = ({
   const permissionOptions = [
     { id: "dashboard", label: "Dashboard Access" },
     { id: "customers", label: "Customer Management" },
-    { id: "products-services", label: "Products/Setvices Management" },
-    { id: "credit-note", label: "Credit Note Management" },
-    { id: "invoices", label: "invoices Management" },
+    { id: "products-services", label: "Products/Services Management" },
+    { id: "credit-notes", label: "Credit Notes Management" },
+    { id: "invoices", label: "Invoices Management" },
     { id: "expense", label: "Expense Management" },
     { id: "salary", label: "Salary Management" },
-    { id: "purchase-invoices", label: "Purchase Inv Management" },
-    { id: "suppliers", label: "Supplier management" },
+    { id: "purchase-invoices", label: "Purchase Invoices Management" },
+    { id: "suppliers", label: "Suppliers Management" },
     { id: "bank-statements", label: "Bank Statements" },
-    { id: "pending-payments", label: "Pending Statements" },
+    { id: "pending-payments", label: "Pending Payments" },
+    { id: "report", label: "Reports Access" },
   ];
 
   return (
