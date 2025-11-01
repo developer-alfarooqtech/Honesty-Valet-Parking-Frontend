@@ -490,8 +490,12 @@ const createBillToSection = (customer, customerVAT) => {
     <p style="font-size: 14px; margin: 0 0 3px 0;">${customer?.name || "N/A"}</p>
    
     ${customer?.Phone ? `<p style="font-size: 14px; margin: 1px 0;">Phone: ${customer.Phone}</p>` : ''}
-    ${customer?.Email ? `<p style="font-size: 14px; margin: 1px 0;">Email: ${customer.Email}</p>` : ''}
-    ${customer?.address?.address1 ? `<p style="font-size: 14px; margin: 1px 0;">Address: ${customer.address.address1} ${customer.address.address3 || ''}</p>` : ''}
+${customer?.address?.address1 
+  ? `<p style="font-size: 14px; margin: 1px 0;"> 
+      ${customer.address.address1}${customer.address.address3 ? ', ' + customer.address.address3 : ''}
+     </p>` 
+  : ''}
+
     ${customer?.address?.address2 ? `<p style="font-size: 14px; margin: 1px 0;">${customer.address.address2}</p>` : ''}
     ${customerVAT ? `<p style="font-size: 14px; margin: 1px 0;">VAT No: ${customerVAT}</p>` : ''}
   `;
