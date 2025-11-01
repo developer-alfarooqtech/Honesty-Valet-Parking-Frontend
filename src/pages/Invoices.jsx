@@ -16,7 +16,7 @@ import InvoiceRepaymentModal from "../components/Invoice_comp/InvoiceRepaymentMo
 import InvoicesList from "../components/Invoice_comp/InvoicesList";
 import UpdateExpDateModal from "../components/Invoice_comp/UpdateExpDateModal";
 import InvoiceStats from "../components/Invoice_comp/InvoiceStats";
-import { printMultipleInvoices } from "../components/Invoice_comp/DownloadSelectedInvoices";
+import { printMultipleInvoicesJsPDF as printMultipleInvoices } from "../components/Invoice_comp/DownloadSelectedInvoices";
 import ConfirmationModal from "../components/SalesOrder_comp/ConfirmationModal";
 import ProductNoteModal from "../components/SalesOrder_comp/ProductNoteModal";
 

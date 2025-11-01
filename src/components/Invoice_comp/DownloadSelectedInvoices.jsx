@@ -1,13 +1,348 @@
 // InvoicePDFDownload.js
 import toast from "react-hot-toast";
 import { formatDate } from "../../utils/formatDate";
-import html2pdf from 'html2pdf.js';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
+// Helper function to draw rounded rectangles
+const drawRoundedRect = (doc, x, y, width, height, radius) => {
+  doc.roundedRect(x, y, width, height, radius, radius);
+};
+
+// New direct jsPDF implementation
+export const printMultipleInvoicesJsPDF = async (invoices, includeSeal = false, includeSignature = false) => {
+  if (!invoices || invoices.length === 0) {
+    toast.error("No invoices selected for printing");
+    return;
+  }
+
+  try {
+    toast.loading(`Generating PDF for ${invoices.length} invoice(s)...`, { id: 'pdf-gen' });
+    
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+      compress: true
+    });
+
+    // A4 dimensions
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 10;
+    const contentWidth = pageWidth - (margin * 2);
+
+    // Load images if needed
+    let logoImg = null;
+    let sealImg = null;
+    let signImg = null;
+
+    try {
+      // Load logo
+      const logoResponse = await fetch('/hvp_logo.png');
+      const logoBlob = await logoResponse.blob();
+      logoImg = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(logoBlob);
+      });
+
+      // Load seal if needed
+      if (includeSeal) {
+        const sealResponse = await fetch('/hvp_seal.png');
+        const sealBlob = await sealResponse.blob();
+        sealImg = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(sealBlob);
+        });
+      }
+
+      // Load signature if needed
+      if (includeSignature) {
+        const signResponse = await fetch('/hvp_sign.png');
+        const signBlob = await signResponse.blob();
+        signImg = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(signBlob);
+        });
+      }
+    } catch (err) {
+      console.error('Error loading images:', err);
+    }
+
+    // Process each invoice
+    for (let invoiceIndex = 0; invoiceIndex < invoices.length; invoiceIndex++) {
+      const invoice = invoices[invoiceIndex];
+      const customer = invoice?.customer;
+      const customerVAT = customer?.VATNo || null;
+
+      // Add new page for subsequent invoices
+      if (invoiceIndex > 0) {
+        doc.addPage();
+      }
+
+      let yPos = margin;
+
+      // Header Section - Logo at top left
+      if (logoImg) {
+        const logoWidth = 80;
+        const logoHeight = 30;
+        doc.addImage(logoImg, 'PNG', margin, yPos, logoWidth, logoHeight);
+        yPos += logoHeight + 5;
+      }
+      
+      // Company details below logo (left aligned) - 10pt / 9pt
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Tel: +97142630077', margin, yPos);
+      yPos += 5;
+      doc.text('Fax: +97142636786', margin, yPos);
+      yPos += 5;
+      doc.text('PO Box: 49112, Dubai-UAE', margin, yPos);
+      yPos += 5;
+      doc.setFontSize(9);
+      doc.text('Email: sales@honestynperfection.com', margin, yPos);
+      yPos += 5;
+      doc.text('VAT Reg No: 100596686400003', margin, yPos);
+      yPos += 5;
+
+      yPos += 5;
+
+      // Customer Details and Tax Invoice Panel (side by side)
+      const leftBoxWidth = contentWidth * 0.55;
+      const rightBoxWidth = contentWidth * 0.40;
+      const boxStartY = yPos;
+
+      // Left: Bill To - 11pt
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.4);
+      drawRoundedRect(doc, margin, yPos, leftBoxWidth, 30, 2);
+      
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      yPos += 5;
+      
+      // Wrap customer name if too long
+      const customerName = customer?.name || 'N/A';
+      const nameLines = doc.splitTextToSize(customerName, leftBoxWidth - 4);
+      doc.text(nameLines, margin + 2, yPos);
+      yPos += nameLines.length * 5;
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      
+      if (customer?.Phone) {
+        const phoneText = `Phone: ${customer.Phone}`;
+        const phoneLines = doc.splitTextToSize(phoneText, leftBoxWidth - 4);
+        doc.text(phoneLines, margin + 2, yPos);
+        yPos += phoneLines.length * 5;
+      }
+      
+      if (customer?.address?.address1) {
+        const addressText = `Address: ${customer.address.address1}${customer.address.address3 ? ', ' + customer.address.address3 : ''}`;
+        const addressLines = doc.splitTextToSize(addressText, leftBoxWidth - 4);
+        doc.text(addressLines, margin + 2, yPos);
+        yPos += addressLines.length * 5;
+      }
+      
+      if (customer?.address?.address2) {
+        const address2Lines = doc.splitTextToSize(customer.address.address2, leftBoxWidth - 4);
+        doc.text(address2Lines, margin + 2, yPos);
+        yPos += address2Lines.length * 5;
+      }
+      
+      if (customerVAT) {
+        const vatText = `VAT No: ${customerVAT}`;
+        const vatLines = doc.splitTextToSize(vatText, leftBoxWidth - 4);
+        doc.text(vatLines, margin + 2, yPos);
+      }
+
+      // Right: Tax Invoice Panel - TAX INVOICE Label 11pt, Meta Table 11pt
+      const rightBoxX = margin + leftBoxWidth + (contentWidth - leftBoxWidth - rightBoxWidth);
+      yPos = boxStartY;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text('TAX INVOICE', rightBoxX, yPos - 2);
+      
+      drawRoundedRect(doc, rightBoxX, yPos, rightBoxWidth, 30, 2);
+      
+      // Draw internal lines
+      doc.line(rightBoxX, yPos + 7.5, rightBoxX + rightBoxWidth, yPos + 7.5);
+      doc.line(rightBoxX, yPos + 15, rightBoxX + rightBoxWidth, yPos + 15);
+      doc.line(rightBoxX, yPos + 22.5, rightBoxX + rightBoxWidth, yPos + 22.5);
+      doc.line(rightBoxX + rightBoxWidth * 0.4, yPos, rightBoxX + rightBoxWidth * 0.4, yPos + 30);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text('Invoice No', rightBoxX + 1, yPos + 5);
+      doc.text('Date:', rightBoxX + 1, yPos + 12.5);
+      doc.text('Account Ref:', rightBoxX + 1, yPos + 20);
+      doc.text('LPO:', rightBoxX + 1, yPos + 27.5);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.text(invoice?.name || 'N/A', rightBoxX + rightBoxWidth * 0.42, yPos + 5);
+      doc.text(formatDate(invoice?.date || invoice?.createdAt || new Date()), rightBoxX + rightBoxWidth * 0.42, yPos + 12.5);
+      doc.text(customer?.Code || '', rightBoxX + rightBoxWidth * 0.42, yPos + 20);
+      doc.text(invoice?.lpo || '', rightBoxX + rightBoxWidth * 0.42, yPos + 27.5);
+
+      yPos = boxStartY + 35;
+
+      // Items Table
+      const products = invoice?.products || [];
+      const services = invoice?.services || [];
+      const allItems = [...products, ...services];
+      const vatRate = invoice?.vatRate || 5;
+
+      const tableData = allItems.map(item => {
+        const netAmount = (item.price || 0) * (item.quantity || 0);
+        const vatAmount = netAmount * (vatRate / 100);
+        const totalAmount = netAmount + vatAmount;
+        
+        return [
+          item.quantity || 0,
+          item?.note || item?.service?.name || item?.product?.name || 'N/A',
+          (item.price || 0).toFixed(2),
+          netAmount.toFixed(2),
+          vatAmount.toFixed(2),
+          totalAmount.toFixed(2)
+        ];
+      });
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Qty', 'Description', 'Unit Price', 'Net Amt', `VAT (${vatRate}%)`, 'Total']],
+        body: tableData,
+        theme: 'plain',
+        styles: {
+          fontSize: 9.5,
+          cellPadding: 2.5,
+          font: 'helvetica',
+          fontStyle: 'normal',
+          lineWidth: 0
+        },
+        headStyles: {
+          fillColor: [164, 168, 177],
+          textColor: [0, 0, 0],
+          fontStyle: 'bold',
+          fontSize: 9.5,
+          halign: 'center'
+        },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 15 },
+          1: { halign: 'left', cellWidth: 'auto' },
+          2: { halign: 'right', cellWidth: 25 },
+          3: { halign: 'right', cellWidth: 25 },
+          4: { halign: 'right', cellWidth: 25 },
+          5: { halign: 'right', cellWidth: 25 }
+        },
+        margin: { left: margin, right: margin }
+      });
+
+      yPos = doc.lastAutoTable.finalY + 10;
+
+      // Footer Section
+      const totalNetAmount = allItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0);
+      const totalVatAmount = totalNetAmount * (vatRate / 100);
+      const invoiceTotal = totalNetAmount + totalVatAmount;
+
+      // Signature boxes at bottom
+      const footerY = pageHeight - 45;
+      
+      // Left side - Seal and Customer Signature
+      const boxWidth = (contentWidth - 10) / 2;
+      const boxHeight = 25;
+      const smallBoxHeight = 12;
+      
+      // Top small boxes (signature and empty)
+      drawRoundedRect(doc, margin, footerY - 15, boxWidth / 2 - 2, smallBoxHeight, 2);
+      if (includeSignature && signImg) {
+        // Add signature with aspect ratio maintained, centered in box
+        const signBoxWidth = boxWidth / 2 - 2;
+        const signBoxHeight = smallBoxHeight;
+        const maxSignWidth = signBoxWidth - 4;
+        const maxSignHeight = signBoxHeight - 4;
+        doc.addImage(signImg, 'PNG', margin + 2, footerY - 13, maxSignWidth, maxSignHeight, undefined, 'FAST');
+      }
+      drawRoundedRect(doc, margin + boxWidth / 2 + 2, footerY - 15, boxWidth / 2 - 2, smallBoxHeight, 2);
+
+      // Seal box
+      drawRoundedRect(doc, margin, footerY, boxWidth / 2 - 2, boxHeight, 2);
+      if (includeSeal && sealImg) {
+        doc.addImage(sealImg, 'PNG', margin + 2, footerY + 2, (boxWidth / 2 - 2) - 4, boxHeight - 4);
+      }
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('For Honesty and perfection', margin + (boxWidth / 4 - 2), footerY + boxHeight + 5, { align: 'center' });
+      doc.text('Sign & Seal', margin + (boxWidth / 4 - 2), footerY + boxHeight + 10, { align: 'center' });
+
+      // Customer Signature box
+      drawRoundedRect(doc, margin + boxWidth / 2 + 2, footerY, boxWidth / 2 - 2, boxHeight, 2);
+      doc.text('Customer Signature', margin + boxWidth / 2 + 2 + (boxWidth / 4 - 2), footerY + boxHeight + 5, { align: 'center' });
+
+      // Right side - Payment summary - Totals Box 10.5pt
+      const summaryX = margin + boxWidth + 10;
+      const summaryWidth = contentWidth - boxWidth - 10;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10.5);
+      
+      const rowHeight = boxHeight / 3;
+      // Draw outer rounded rectangle for payment summary
+      drawRoundedRect(doc, summaryX, footerY, summaryWidth, boxHeight, 2);
+      
+      // Draw internal lines for rows
+      doc.line(summaryX, footerY + rowHeight, summaryX + summaryWidth, footerY + rowHeight);
+      doc.line(summaryX, footerY + rowHeight * 2, summaryX + summaryWidth, footerY + rowHeight * 2);
+      doc.line(summaryX + summaryWidth / 2, footerY, summaryX + summaryWidth / 2, footerY + boxHeight);
+      
+      doc.text('Total Net Amount:', summaryX + 2, footerY + rowHeight / 2 + 1.5);
+      doc.text(`AED ${totalNetAmount.toFixed(2)}`, summaryX + summaryWidth - 2, footerY + rowHeight / 2 + 1.5, { align: 'right' });
+      
+      doc.text(`Total Tax Amount (${vatRate}%):`, summaryX + 2, footerY + rowHeight + rowHeight / 2 + 1.5);
+      doc.text(`AED ${totalVatAmount.toFixed(2)}`, summaryX + summaryWidth - 2, footerY + rowHeight + rowHeight / 2 + 1.5, { align: 'right' });
+      
+      doc.text('INVOICE TOTAL:', summaryX + 2, footerY + rowHeight * 2 + rowHeight / 2 + 1.5);
+      doc.text(`AED ${invoiceTotal.toFixed(2)}`, summaryX + summaryWidth - 2, footerY + rowHeight * 2 + rowHeight / 2 + 1.5, { align: 'right' });
+    }
+
+    toast.dismiss('pdf-gen');
+
+    // Open PDF in new tab
+    const pdfBlob = doc.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    const newWindow = window.open(pdfUrl, '_blank');
+    
+    if (!newWindow) {
+      toast.error('Please allow popups to view the PDF');
+    } else {
+      toast.success(`${invoices.length} invoice(s) generated successfully!`);
+    }
+
+  } catch (error) {
+    console.error('PDF generation failed:', error);
+    toast.dismiss('pdf-gen');
+    toast.error('Failed to generate PDF: ' + error.message);
+  }
+};
+
+// Old html2canvas implementation (kept for backward compatibility)
 export const printMultipleInvoices = async (invoices, includeSeal = false, includeSignature = false) => {
   if (!invoices || invoices.length === 0) {
     console.error("No invoices provided for printing");
     toast.error("No invoices selected for printing");
     return;
+  }
+
+  // Warn user about large batches
+  if (invoices.length > 25) {
+    toast.loading(`Processing ${invoices.length} invoices... This may take a moment.`, {
+      duration: 5000,
+      id: 'pdf-processing'
+    });
   }
 
   try {
@@ -18,7 +353,7 @@ export const printMultipleInvoices = async (invoices, includeSeal = false, inclu
       font-family: 'Tahoma', 'Arial Black', 'Segoe UI', Geneva, sans-serif;
       font-weight: bold;
       background: white;
-      color: #1a1a1a;
+      color: #000000ff;
       line-height: 1.4;
       visibility: visible;
       opacity: 1;
@@ -137,34 +472,51 @@ export const printMultipleInvoices = async (invoices, includeSeal = false, inclu
 
     document.body.appendChild(container);
     
+    console.log(`Generating PDF for ${invoices.length} invoice(s)...`);
+    console.log(`Container dimensions: ${container.scrollWidth}px x ${container.scrollHeight}px`);
     
-    // Debug: Log all pages and elements with their types
-    const allElements = container.children;
-    for (let i = 0; i < allElements.length; i++) {
-      const element = allElements[i];
-      const type = element.getAttribute('data-page-type') || 'unknown';
-      const className = element.className || 'no-class';
-      console.log(`  Element ${i + 1}: ${type}, class: ${className}, tag: ${element.tagName}`);
+    // Give browser time to render, especially for large batches
+    const renderDelay = invoices.length > 25 ? 3000 : invoices.length > 10 ? 1500 : 500;
+    await new Promise(resolve => setTimeout(resolve, renderDelay));
+
+    // Optimized scaling for quality and performance
+    let scale, quality, imageType;
+    if (invoices.length > 40) {
+      scale = 1.0;
+      quality = 0.85;
+      imageType = 'jpeg';
+    } else if (invoices.length > 25) {
+      scale = 1.2;
+      quality = 0.88;
+      imageType = 'jpeg';
+    } else if (invoices.length > 10) {
+      scale = 1.3;
+      quality = 0.92;
+      imageType = 'jpeg';
+    } else {
+      scale = 1.5;
+      quality = 0.96;
+      imageType = 'png';
     }
-    
-    await new Promise(resolve => setTimeout(resolve, 500));
+
+    console.log(`Using scale: ${scale}, quality: ${quality}, type: ${imageType}`);
 
     const opt = {
       margin: 0,
       filename: `Invoices_${new Date().toISOString().split('T')[0]}.pdf`,
-      image: { type: 'png', quality: 0.96 },
+      image: { type: imageType, quality: quality },
       html2canvas: {
-        scale: 1.5,
+        scale: scale,
         useCORS: true,
         letterRendering: true,
         allowTaint: false,
         scrollX: 0,
         scrollY: 0,
-        width: container.scrollWidth,
-        height: container.scrollHeight,
         backgroundColor: '#ffffff',
-        logging: false,
-        removeContainer: true
+        logging: true,
+        onclone: function(clonedDoc) {
+          console.log('html2canvas cloning document...');
+        }
       },
       jsPDF: {
         unit: 'mm',
@@ -177,8 +529,19 @@ export const printMultipleInvoices = async (invoices, includeSeal = false, inclu
       }
     };
 
+    console.log('Starting PDF generation with html2pdf...');
     const pdfBlob = await html2pdf().set(opt).from(container).outputPdf('blob');
+    
+    console.log('PDF blob generated:', pdfBlob ? `${(pdfBlob.size / 1024 / 1024).toFixed(2)} MB` : 'null/undefined');
+    
+    if (!pdfBlob || pdfBlob.size === 0) {
+      throw new Error('Generated PDF is empty. Try selecting fewer invoices.');
+    }
+    
     document.body.removeChild(container);
+
+    // Dismiss loading toast
+    toast.dismiss('pdf-processing');
 
     const pdfUrl = URL.createObjectURL(pdfBlob);
     const newWindow = window.open(pdfUrl, '_blank');
@@ -190,7 +553,19 @@ export const printMultipleInvoices = async (invoices, includeSeal = false, inclu
 
   } catch (error) {
     console.error('PDF generation failed:', error);
-    toast.error('Failed to generate PDF: ' + error.message);
+    toast.dismiss('pdf-processing');
+    
+    if (invoices.length > 30) {
+      toast.error(`Failed to generate PDF. Try selecting fewer invoices (maximum 30 recommended). Error: ${error.message}`);
+    } else {
+      toast.error('Failed to generate PDF: ' + error.message);
+    }
+    
+    // Clean up container if it exists
+    const existingContainer = document.getElementById('pdf-container');
+    if (existingContainer) {
+      document.body.removeChild(existingContainer);
+    }
   }
 };
 
