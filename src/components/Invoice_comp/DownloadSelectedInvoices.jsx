@@ -216,18 +216,22 @@ const createInvoicePage = (invoice, index = 0, includeSeal = false, includeSigna
   tempContainer.appendChild(createHeader(invoice, customer));
   
   const detailsGrid = document.createElement('div');
-  detailsGrid.style.cssText = `display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: flex-start; margin-bottom: 15px;`;
+  detailsGrid.style.cssText = `display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: flex-start; margin-bottom: 8px;`;
   
   const billToSection = document.createElement('div');
+  const billToLabel = document.createElement('div');
+  billToLabel.innerHTML = '&nbsp;';
+  billToLabel.style.cssText = `font-size: 13px; font-weight: 700; margin-bottom: 6px; height: 18.2px;`;
+  billToSection.appendChild(billToLabel);
   billToSection.appendChild(createBillToSection(customer, customerVAT));
   detailsGrid.appendChild(billToSection);
 
   const taxInvoiceSection = document.createElement('div');
   const taxInvoiceLabel = document.createElement('div');
   taxInvoiceLabel.textContent = 'TAX INVOICE';
-  taxInvoiceLabel.style.cssText = `font-size: 13px; font-weight: 700; margin-bottom: 12px; display: block; padding-bottom: 0; width: 80%; margin-left: auto;`;
+  taxInvoiceLabel.style.cssText = `font-size: 13px; font-weight: 700; margin-bottom: 6px; display: block; padding-bottom: 0; width: 80%; margin-left: auto;`;
   taxInvoiceSection.appendChild(taxInvoiceLabel);
-  taxInvoiceSection.appendChild(createTaxInvoicePanel(invoice));
+  taxInvoiceSection.appendChild(createTaxInvoicePanel(invoice, customer));
   detailsGrid.appendChild(taxInvoiceSection);
   
   tempContainer.appendChild(detailsGrid);
@@ -272,12 +276,12 @@ const createSinglePage = (invoice, customer, customerVAT, includeSeal = false, i
 
   // Bill To + Tax Invoice
   const detailsGrid = document.createElement('div');
-  detailsGrid.style.cssText = `display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: flex-start; margin-bottom: 15px;`;
+  detailsGrid.style.cssText = `display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: flex-start; margin-bottom: 8px;`;
   
   const billToSection = document.createElement('div');
   const billToLabel = document.createElement('div');
-  billToLabel.textContent = '';
-  billToLabel.style.cssText = `font-size: 13px; font-weight: 700; margin-bottom: 4px;`;
+  billToLabel.innerHTML = '&nbsp;';
+  billToLabel.style.cssText = `font-size: 13px; font-weight: 700; margin-bottom: 6px; height: 18.2px;`;
   billToSection.appendChild(billToLabel);
   billToSection.appendChild(createBillToSection(customer, customerVAT));
   detailsGrid.appendChild(billToSection);
@@ -285,9 +289,9 @@ const createSinglePage = (invoice, customer, customerVAT, includeSeal = false, i
   const taxInvoiceSection = document.createElement('div');
   const taxInvoiceLabel = document.createElement('div');
   taxInvoiceLabel.textContent = 'TAX INVOICE';
-  taxInvoiceLabel.style.cssText = `font-size: 13px; font-weight: 700; margin-bottom: 12px; display: block; width: 80%; margin-left: auto;`;
+  taxInvoiceLabel.style.cssText = `font-size: 13px; font-weight: 700; margin-bottom: 6px; display: block; width: 80%; margin-left: auto;`;
   taxInvoiceSection.appendChild(taxInvoiceLabel);
-  taxInvoiceSection.appendChild(createTaxInvoicePanel(invoice));
+  taxInvoiceSection.appendChild(createTaxInvoicePanel(invoice, customer));
   detailsGrid.appendChild(taxInvoiceSection);
   
   content.appendChild(detailsGrid);
@@ -358,12 +362,12 @@ const createMultiplePages = (invoice, customer, customerVAT, maxContentHeight, i
 
   // Bill To + Tax Invoice
   const detailsGrid = document.createElement('div');
-  detailsGrid.style.cssText = `display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: flex-start; margin-bottom: 15px;`;
+  detailsGrid.style.cssText = `display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: flex-start; margin-bottom: 8px;`;
   
   const billToSection = document.createElement('div');
   const billToLabel = document.createElement('div');
-  billToLabel.textContent = '';
-  billToLabel.style.cssText = `font-size: 13px; font-weight: 700; margin-bottom: 4px;`;
+  billToLabel.innerHTML = '&nbsp;';
+  billToLabel.style.cssText = `font-size: 13px; font-weight: 700; margin-bottom: 6px; height: 18.2px;`;
   billToSection.appendChild(billToLabel);
   billToSection.appendChild(createBillToSection(customer, customerVAT));
   detailsGrid.appendChild(billToSection);
@@ -371,9 +375,9 @@ const createMultiplePages = (invoice, customer, customerVAT, maxContentHeight, i
   const taxInvoiceSection = document.createElement('div');
   const taxInvoiceLabel = document.createElement('div');
   taxInvoiceLabel.textContent = 'TAX INVOICE';
-  taxInvoiceLabel.style.cssText = `font-size: 13px; font-weight: 700; margin-bottom: 12px; display: block; width: 80%; margin-left: auto;`;
+  taxInvoiceLabel.style.cssText = `font-size: 13px; font-weight: 700; margin-bottom: 6px; display: block; width: 80%; margin-left: auto;`;
   taxInvoiceSection.appendChild(taxInvoiceLabel);
-  taxInvoiceSection.appendChild(createTaxInvoicePanel(invoice));
+  taxInvoiceSection.appendChild(createTaxInvoicePanel(invoice, customer));
   detailsGrid.appendChild(taxInvoiceSection);
   
   firstContent.appendChild(detailsGrid);
@@ -446,13 +450,13 @@ const createMultiplePages = (invoice, customer, customerVAT, maxContentHeight, i
 
 const createHeader = (invoice, customer) => {
   const header = document.createElement('div');
-  header.style.cssText = `display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 10px;`;
+  header.style.cssText = `display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; padding-bottom: 5px;`;
 
   const companyInfo = document.createElement('div');
   const logo = document.createElement('img');
   logo.src = '/hvp_logo.png';
   logo.alt = 'Honesty Valet Parking Logo';
-  logo.style.cssText = `height: 110px; margin-bottom: 10px; display: block;`;
+  logo.style.cssText = `height: 110px; margin-bottom: 5px; display: block;`;
   logo.onerror = function() {
     console.log('Logo failed to load');
     this.style.display = 'none';
@@ -464,7 +468,7 @@ const createHeader = (invoice, customer) => {
 
   const companyDetails = document.createElement('div');
   companyDetails.className = 'company-details';
-  companyDetails.style.cssText = `font-size: 14px; line-height: 1.3; color: #1a1a1a; visibility: visible; opacity: 1; font-weight: normal !important;`;
+  companyDetails.style.cssText = `font-size: 14px; line-height: 1.1; color: #1a1a1a; visibility: visible; opacity: 1; font-weight: normal !important;`;
   companyDetails.innerHTML = `
     <p style="margin: 0; color: #1a1a1a; font-weight: normal !important;">Tel: +97142630077</p>
     <p style="margin: 0; color: #1a1a1a; font-weight: normal !important;">Fax: +97142636786</p>
@@ -484,16 +488,17 @@ const createBillToSection = (customer, customerVAT) => {
   billTo.style.cssText = `border: 1.5px solid #000; border-radius: 4px; padding: 6px; font-size: 10px;`;
   billTo.innerHTML = `
     <p style="font-size: 14px; margin: 0 0 3px 0;">${customer?.name || "N/A"}</p>
-    ${customer?.Code ? `<p style="font-size: 14px; margin: 1px 0;">Company Code: ${customer.Code}</p>` : ''}
+   
     ${customer?.Phone ? `<p style="font-size: 14px; margin: 1px 0;">Phone: ${customer.Phone}</p>` : ''}
     ${customer?.Email ? `<p style="font-size: 14px; margin: 1px 0;">Email: ${customer.Email}</p>` : ''}
-    ${customer?.address?.address1 ? `<p style="font-size: 14px; margin: 1px 0;">Address: ${customer.address.address1}</p>` : ''}
+    ${customer?.address?.address1 ? `<p style="font-size: 14px; margin: 1px 0;">Address: ${customer.address.address1} ${customer.address.address3}</p>` : ''}
+    ${customer.address.address2 ? `<p style="font-size: 14px; margin: 1px 0;">${customer.address.address2}</p>` : ''}
     ${customerVAT ? `<p style="font-size: 14px; margin: 1px 0;">VAT No: ${customerVAT}</p>` : ''}
   `;
   return billTo;
 };
 
-const createTaxInvoicePanel = (invoice) => {
+const createTaxInvoicePanel = (invoice, customer) => {
     const panel = document.createElement('div');
     panel.className = 'normal-text';
     panel.style.cssText = `border: 1.5px solid #000; border-radius: 4px; overflow: hidden; width: 80%; margin-left: auto;`;
@@ -506,6 +511,10 @@ const createTaxInvoicePanel = (invoice) => {
           <tr style="border-bottom: 1.5px solid #000;">
             <td style="padding: 6px; font-size: 14px; border-right: 1.5px solid #000;">Date:</td>
             <td style="padding: 6px; font-size: 14px;">${formatDate(invoice?.date || invoice?.createdAt || new Date())}</td>
+          </tr>
+          <tr style="border-bottom: 1.5px solid #000;">
+            <td style="padding: 6px; font-size: 14px; border-right: 1.5px solid #000;">Account Ref:</td>
+            <td style="padding: 6px; font-size: 14px;">${customer?.Code || ''}</td>
           </tr>
           <tr>
             <td style="padding: 6px; font-size: 14px; border-right: 1.5px solid #000;">LPO:</td>

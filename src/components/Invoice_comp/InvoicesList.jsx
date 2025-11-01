@@ -219,7 +219,7 @@ const getDaysPastDue = (dateString) => {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-700">
                     <p className="font-medium">{formatDate(invoice?.date)}</p>
-                    <p className="text-xs text-gray-500">Created: {formatDate(invoice?.createdAt)}</p>
+                    {/* <p className="text-xs text-gray-500">Created: {formatDate(invoice?.createdAt)}</p> */}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">

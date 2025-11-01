@@ -44,7 +44,7 @@ const ModalHeader = ({ onClose, invoice }) => (
       </div>
     </div>
     <div className="flex items-center space-x-2">
-      <PrintInv invoice={invoice}/>
+      {/* <PrintInv invoice={invoice}/> */}
       <button
         onClick={onClose}
         className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all duration-300"
