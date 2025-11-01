@@ -16,7 +16,7 @@ import InvoiceRepaymentModal from "../components/Invoice_comp/InvoiceRepaymentMo
 import InvoicesList from "../components/Invoice_comp/InvoicesList";
 import UpdateExpDateModal from "../components/Invoice_comp/UpdateExpDateModal";
 import InvoiceStats from "../components/Invoice_comp/InvoiceStats";
-import { printMultipleInvoices, printLargeInvoiceBatch } from "../components/Invoice_comp/PrintInv";
+import { printMultipleInvoices } from "../components/Invoice_comp/DownloadSelectedInvoices";
 import ConfirmationModal from "../components/SalesOrder_comp/ConfirmationModal";
 import ProductNoteModal from "../components/SalesOrder_comp/ProductNoteModal";
 
@@ -29,6 +29,10 @@ import { useInvoiceLogic } from "../hooks/useInvoiceLogic";
 import { useInvoiceHandlers } from "../hooks/useInvoiceHandlers";
 
 const Invoices = () => {
+  // State for seal and signature checkboxes
+  const [includeSeal, setIncludeSeal] = React.useState(true);
+  const [includeSignature, setIncludeSignature] = React.useState(false);
+
   // Use custom hooks for logic and handlers
   const invoiceLogic = useInvoiceLogic();
   const invoiceHandlers = useInvoiceHandlers(invoiceLogic);
@@ -278,18 +282,14 @@ const Invoices = () => {
               </button>
 
               <button
-                onClick={() => {
-                  // Automatically choose the appropriate printing method based on quantity
-                  if (selectedInvoices.length > 30) {
-                    printLargeInvoiceBatch({
-                      selectedInvoices,
-                      setPrintingInvoices
-                    });
-                  } else {
-                    printMultipleInvoices({
-                      selectedInvoices,
-                      setPrintingInvoices
-                    });
+                onClick={async () => {
+                  setPrintingInvoices(true);
+                  try {
+                    await printMultipleInvoices(selectedInvoices, includeSeal, includeSignature);
+                  } catch (error) {
+                    console.error("Print error:", error);
+                  } finally {
+                    setPrintingInvoices(false);
                   }
                 }}
                 disabled={selectedInvoices.length === 0 || printingInvoices}
@@ -298,10 +298,10 @@ const Invoices = () => {
                     ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg"
                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
-                title={`Print selected invoices${selectedInvoices.length > 30 ? ' (Large batch mode)' : ''}`}
+                title="Print selected invoices"
               >
                 <Printer size={16} />
-                <span>{printingInvoices ? "Printing..." : `Print Invoices${selectedInvoices.length > 30 ? ' (Batch)' : ''}`}</span>
+                <span>{printingInvoices ? "Printing..." : "Print Invoices"}</span>
               </button>
             </div>
           </div>
@@ -333,53 +333,64 @@ const Invoices = () => {
             exportingExcel={exportingExcel}
           />
 
-          {/* Selected Invoices Count and Print Button */}
+          {/* Selected Invoices Count and Print Button with Seal/Signature Options */}
           {selectedInvoices.length > 0 && (
             <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="text-sm">
-                  <span className="font-medium text-blue-700">
-                    {selectedInvoices.length}
-                  </span>{" "}
-                  <span className="text-blue-600">invoice(s) selected</span>
-                  {selectedInvoices.length > 30 && (
-                    <div className="text-xs text-orange-600 mt-1">
-                      Large batch detected - will use optimized printing mode
-                    </div>
-                  )}
-                  {selectedInvoices.length > 6 && selectedInvoices.length <= 30 && (
-                    <div className="text-xs text-blue-500 mt-1">
-                    
-                    </div>
-                  )}
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm">
+                    <span className="font-medium text-blue-700">
+                      {selectedInvoices.length}
+                    </span>{" "}
+                    <span className="text-blue-600">invoice(s) selected</span>
+                  </div>
+                  
+                  <button
+                    onClick={async () => {
+                      setPrintingInvoices(true);
+                      try {
+                        await printMultipleInvoices(selectedInvoices, includeSeal, includeSignature);
+                      } catch (error) {
+                        console.error("Print error:", error);
+                      } finally {
+                        setPrintingInvoices(false);
+                      }
+                    }}
+                    disabled={printingInvoices}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+                      !printingInvoices
+                        ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl"
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    }`}
+                    title="Print selected invoices"
+                  >
+                    <Printer size={18} />
+                    <span>{printingInvoices ? "Printing..." : "Print Selected Invoices"}</span>
+                  </button>
                 </div>
-                
-                <button
-                  onClick={() => {
-                    // Automatically choose the appropriate printing method based on quantity
-                    if (selectedInvoices.length > 30) {
-                      printLargeInvoiceBatch({
-                        selectedInvoices,
-                        setPrintingInvoices
-                      });
-                    } else {
-                      printMultipleInvoices({
-                        selectedInvoices,
-                        setPrintingInvoices
-                      });
-                    }
-                  }}
-                  disabled={printingInvoices}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
-                    !printingInvoices
-                      ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl"
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  }`}
-                  title={`Print selected invoices${selectedInvoices.length > 30 ? ' (Large batch mode)' : ''}`}
-                >
-                  <Printer size={18} />
-                  <span>{printingInvoices ? "Printing..." : `Print Selected Invoices${selectedInvoices.length > 30 ? ' (Batch)' : ''}`}</span>
-                </button>
+
+                {/* Seal and Signature Checkboxes */}
+                <div className="flex items-center gap-6 pt-2 border-t border-blue-200">
+                  {/* <span className="text-sm font-medium text-blue-700">PDF Options:</span> */}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includeSeal}
+                      onChange={(e) => setIncludeSeal(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">Company Seal</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includeSignature}
+                      onChange={(e) => setIncludeSignature(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">Company Signature</span>
+                  </label>
+                </div>
               </div>
             </div>
           )}

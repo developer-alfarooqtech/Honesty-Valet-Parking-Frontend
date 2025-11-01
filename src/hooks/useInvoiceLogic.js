@@ -12,7 +12,7 @@ import {
   updateInvoice,
 } from "../service/invoicesService";
 import { fetchBanks } from "../service/bankService";
-import { handleDownloadPDF } from "../components/Invoice_comp/DownloadInvoice";
+import { downloadInvoicesAsPDF } from "../components/Invoice_comp/DownloadSelectedInvoices";
 import useDebounce from "./useDebounce";
 
 export const useInvoiceLogic = () => {
@@ -430,19 +430,52 @@ export const useInvoiceLogic = () => {
 
   // PDF download function
   const downloadPdf = async () => {
-    await handleDownloadPDF({
-      setExportingPDF,
-      debouncedSearchTerm,
-      startDate,
-      endDate,
-      showOverdueOnly,
-      showPaymentClearedOnly,
-      showPendingOnly,
-      showCancelledOnly,
-      selectedCustomer,
-      sortOrder,
-      isExpired,
-    });
+    try {
+      setExportingPDF(true);
+      
+      // Fetch invoices with current filters
+      const response = await downloadInvoices({
+        debouncedSearchTerm,
+        startDate,
+        endDate,
+        overdueOnly: showOverdueOnly,
+        paymentClearedOnly: showPaymentClearedOnly,
+        sort: sortOrder,
+        customerId: selectedCustomer?._id || "",
+      });
+
+      let invoicesData = response.data.invoices || [];
+      
+      if (invoicesData.length === 0) {
+        toast.error("No invoices found with current filters");
+        return;
+      }
+
+      // Fetch full details for each invoice to get populated products/services
+      console.log("Fetching details for", invoicesData.length, "invoices...");
+      const detailedInvoices = await Promise.all(
+        invoicesData.map(async (invoice) => {
+          try {
+            const detailResponse = await fetchInvDetails(invoice._id);
+            return detailResponse.data.invoice || invoice;
+          } catch (err) {
+            console.error(`Failed to fetch details for invoice ${invoice._id}:`, err);
+            return invoice; // Fallback to original invoice if details fetch fails
+          }
+        })
+      );
+
+      console.log("Sample detailed invoice:", detailedInvoices[0]);
+
+      // Generate PDF using the new component
+      await downloadInvoicesAsPDF(detailedInvoices, setExportingPDF);
+      
+    } catch (error) {
+      console.error("PDF download failed:", error);
+      toast.error("Failed to download PDF: " + (error.message || "Unknown error"));
+    } finally {
+      setExportingPDF(false);
+    }
   };
 
   // Return all state and functions

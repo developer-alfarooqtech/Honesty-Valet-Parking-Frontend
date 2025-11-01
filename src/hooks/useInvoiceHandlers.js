@@ -248,16 +248,18 @@ export const useInvoiceHandlers = (invoiceLogic) => {
       setVatRate(detailedInvoice.vatRate || 5);
 
       if (detailedInvoice.products && detailedInvoice.products.length > 0) {
-        const formattedProducts = detailedInvoice.products.map((item) => {
+        const formattedProducts = detailedInvoice.products.map((item, index) => {
           const product = item.product || {};
           
           return {
             _id: product._id,
+            _selectedKey: `edit-product-${product._id}-${index}-${Date.now()}`,
             name: product.name || "Unknown Product",
             code: product.code || "",
             sellingPrice: item.price || 0,
             quantity: item.quantity || 0,
             note: item.note || "",
+            additionalNote: item.additionalNote || "",
             purchasePrice: item.purchasePrice || product.purchasePrice || 0,
             selectedBatch: item.batchId 
               ? { _id: item.batchId }
@@ -277,16 +279,18 @@ export const useInvoiceHandlers = (invoiceLogic) => {
       }
       
       if (detailedInvoice.services && detailedInvoice.services.length > 0) {
-        const formattedServices = detailedInvoice.services.map((item) => {
+        const formattedServices = detailedInvoice.services.map((item, index) => {
           const service = item.service || {};
           
           return {
             _id: service._id,
+            _selectedKey: `edit-service-${service._id}-${index}-${Date.now()}`,
             name: service.name || "Unknown Service",
             code: service.code || "",
             price: item.price || 0,
             quantity: item.quantity || 0,
             note: item.note || "",
+            additionalNote: item.additionalNote || "",
           };
         });
         
