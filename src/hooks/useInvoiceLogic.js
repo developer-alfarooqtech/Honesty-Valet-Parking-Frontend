@@ -26,7 +26,7 @@ export const useInvoiceLogic = () => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [limit] = useState(10);
+  const [limit] = useState(50);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedInvoices, setSelectedInvoices] = useState([]);
   const [isRepaymentModalOpen, setIsRepaymentModalOpen] = useState(false);
