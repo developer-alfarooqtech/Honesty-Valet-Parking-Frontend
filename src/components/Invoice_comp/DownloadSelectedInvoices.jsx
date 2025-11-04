@@ -263,9 +263,17 @@ export const printMultipleInvoicesJsPDF = async (invoices, includeSeal = false, 
         // Add signature with aspect ratio maintained, centered in box
         const signBoxWidth = boxWidth / 2 - 2;
         const signBoxHeight = smallBoxHeight;
-        const maxSignWidth = signBoxWidth - 4;
-        const maxSignHeight = signBoxHeight - 4;
-        doc.addImage(signImg, 'PNG', margin + 2, footerY - 13, maxSignWidth, maxSignHeight, undefined, 'FAST');
+        const padding = 2;
+        const maxSignWidth = signBoxWidth - (padding * 2);
+        const maxSignHeight = signBoxHeight - (padding * 2);
+        
+        // Calculate aspect ratio preserving dimensions
+        const signWidth = 16; // Adjust width as needed
+        const signHeight = maxSignHeight;
+        const signX = margin + (signBoxWidth - signWidth) / 2; // Center horizontally
+        const signY = footerY - 15 + padding;
+        
+        doc.addImage(signImg, 'PNG', signX, signY, signWidth, signHeight, undefined, 'FAST');
       }
       drawRoundedRect(doc, margin + boxWidth / 2 + 2, footerY - 15, boxWidth / 2 - 2, smallBoxHeight, 2);
 

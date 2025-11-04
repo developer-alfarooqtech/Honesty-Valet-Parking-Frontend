@@ -104,7 +104,7 @@ const InvoiceFiltersPanel = ({
             </div>
             <input
               type="text"
-              placeholder="Search by invoice name"
+              placeholder="Search by invoice"
               className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-700 placeholder-gray-400 transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}

@@ -232,7 +232,7 @@ const Invoices = () => {
               </div>
               <input
                 type="text"
-                placeholder="Search invoices by name..."
+                placeholder="Search Invoice"
                 className="pl-10 w-full p-3 bg-white border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-700 placeholder-gray-400"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
