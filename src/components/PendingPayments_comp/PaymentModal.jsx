@@ -11,6 +11,7 @@ const PaymentModal = ({ payments, onClose, onSuccess }) => {
   const [paymentDate, setPaymentDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+  const [globalDescription, setGlobalDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -59,7 +60,7 @@ const PaymentModal = ({ payments, onClose, onSuccess }) => {
         amount: paymentData.amount || 0,
         bankAccount: selectedBankAccount,
         date: paymentDate,
-        description: paymentData.description || "", // Add description
+        description: globalDescription || paymentData.description || "", // Use global description if provided, otherwise use individual
       }));
 
       const response = await applyPayment({ payment: paymentPayload });
@@ -138,7 +139,7 @@ const PaymentModal = ({ payments, onClose, onSuccess }) => {
                     <input
                       type="date"
                       value={paymentDate}
-                      onChange={(date) => setPaymentDate(date)}
+                      onChange={(e) => setPaymentDate(e.target.value)}
                       className="w-full p-3 pl-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       required
                     
@@ -146,6 +147,20 @@ const PaymentModal = ({ payments, onClose, onSuccess }) => {
                     <Calendar className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
                   </div>
                 </div>
+              </div>
+
+              {/* Global Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description (applies to all invoices)
+                </label>
+                <input
+                  type="text"
+                  value={globalDescription}
+                  onChange={(e) => setGlobalDescription(e.target.value)}
+                  placeholder="Enter description for all invoices..."
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
             </div>
 
@@ -232,7 +247,7 @@ const PaymentModal = ({ payments, onClose, onSuccess }) => {
                           </td>
                           <td className="px-4 py-3">
                             <div className="text-sm text-gray-900">
-                              {paymentData.description || "-"}
+                              {globalDescription || paymentData.description || "-"}
                             </div>
                           </td>
                           <td className="px-4 py-3 text-right">
@@ -250,6 +265,21 @@ const PaymentModal = ({ payments, onClose, onSuccess }) => {
                       );
                     })}
                   </tbody>
+                  <tfoot className="bg-gray-100">
+                    <tr>
+                      <td colSpan="4" className="px-4 py-3 text-right font-semibold text-gray-900">
+                        Total Payment Amount:
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="text-lg font-bold text-blue-600">
+                          {payments
+                            .reduce((sum, { paymentData }) => sum + (paymentData.amount || 0), 0)
+                            .toFixed(2)}
+                        </div>
+                      </td>
+                      <td colSpan="2"></td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </div>
@@ -257,7 +287,15 @@ const PaymentModal = ({ payments, onClose, onSuccess }) => {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end space-x-4 p-6 border-t border-gray-200 bg-gray-50">
+        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+          <div className="text-lg font-semibold text-gray-900">
+            Total: <span className="text-blue-600">
+              {payments
+                .reduce((sum, { paymentData }) => sum + (paymentData.amount || 0), 0)
+                .toFixed(2)}
+            </span>
+          </div>
+          <div className="flex items-center space-x-4">
           <button
             type="button"
             onClick={onClose}
@@ -282,6 +320,7 @@ const PaymentModal = ({ payments, onClose, onSuccess }) => {
               </>
             )}
           </button>
+          </div>
         </div>
       </div>
     </div>

@@ -255,7 +255,8 @@ const Invoices = () => {
 
             {/* Action Buttons */}
             <div className="flex gap-2">
-              <button
+              {/* dont use these buttons because we have a separate page for repayment */}
+              {/* <button
                 onClick={() => openRepaymentModal(true)}
                 disabled={selectedInvoices.length === 0}
                 className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-all duration-300 ${
@@ -279,7 +280,7 @@ const Invoices = () => {
               >
                 <DollarSign size={16} />
                 <span>Partial Payment</span>
-              </button>
+              </button> */}
 
               <button
                 onClick={async () => {

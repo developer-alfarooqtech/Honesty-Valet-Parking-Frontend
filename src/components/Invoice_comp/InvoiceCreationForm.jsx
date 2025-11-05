@@ -323,10 +323,10 @@ const InvoiceCreationForm = ({
                                       <button
                                         type="button"
                                         onClick={() => handleCreditChange(itemKey, 'showAdditionalNote', true)}
-                                        className="flex-shrink-0 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
-                                        title="Add additional note"
+                                        className="flex-shrink-0 p-2 text-red-600 rounded-lg transition-colors  text-xs"
+                                        title="Add desc"
                                       >
-                                        <Plus size={14} />
+                                        add desc
                                       </button>
                                     )}
                                   </div>
@@ -338,7 +338,7 @@ const InvoiceCreationForm = ({
                                         value={item.additionalNote || ""}
                                         onChange={(e) => handleCreditChange(itemKey, 'additionalNote', e.target.value)}
                                         placeholder="Additional note (optional)..."
-                                        className="flex-1 px-3 py-2 border border-red-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-gray-50 text-gray-700 placeholder-gray-400"
+                                        className="flex-1 px-3 py-2 border border-red-200 rounded-lg text-xs focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-gray-50 text-gray-700 placeholder-gray-400"
                                       />
                                       <button
                                         type="button"
@@ -378,10 +378,10 @@ const InvoiceCreationForm = ({
                                             handleServiceNoteChange(itemKey, item.note, 'showAdditionalNote', true);
                                           }
                                         }}
-                                        className="flex-shrink-0 p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200"
-                                        title="Add additional note"
+                                        className="flex-shrink-0 p-2 text-blue-600 rounded-lg transition-colors  text-xs"
+                                        title="Add desc"
                                       >
-                                        <Plus size={14} />
+                                        add desc
                                       </button>
                                     )}
                                   </div>
@@ -399,7 +399,7 @@ const InvoiceCreationForm = ({
                                           }
                                         }}
                                         placeholder="Additional note (optional)..."
-                                        className="flex-1 px-3 py-2 border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 text-gray-700 placeholder-gray-400"
+                                        className="flex-1 px-3 py-2 border border-blue-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 text-gray-700 placeholder-gray-400"
                                       />
                                       <button
                                         type="button"
@@ -553,10 +553,10 @@ const InvoiceCreationForm = ({
                                       <button
                                         type="button"
                                         onClick={() => handleCreditChange(itemKey, 'showAdditionalNote', true)}
-                                        className="flex-shrink-0 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
-                                        title="Add additional note"
+                                        className="flex-shrink-0 p-2 text-red-600 rounded-lg transition-colors text-xs"
+                                        title="Add desc"
                                       >
-                                        <Plus size={14} />
+                                        add desc
                                       </button>
                                     )}
                                   </div>
@@ -568,7 +568,7 @@ const InvoiceCreationForm = ({
                                         value={item.additionalNote || ""}
                                         onChange={(e) => handleCreditChange(itemKey, 'additionalNote', e.target.value)}
                                         placeholder="Additional note (optional)..."
-                                        className="flex-1 px-3 py-2 border border-red-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-gray-50 text-gray-700 placeholder-gray-400"
+                                        className="flex-1 px-3 py-2 border border-red-200 rounded-lg text-xs focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-gray-50 text-gray-700 placeholder-gray-400"
                                       />
                                       <button
                                         type="button"
@@ -608,10 +608,10 @@ const InvoiceCreationForm = ({
                                             handleServiceNoteChange(itemKey, item.note, 'showAdditionalNote', true);
                                           }
                                         }}
-                                        className="flex-shrink-0 p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200"
-                                        title="Add additional note"
+                                        className="flex-shrink-0 p-2 text-blue-600 rounded-lg transition-colors text-xs"
+                                        title="Add desc"
                                       >
-                                        <Plus size={14} />
+                                        add desc
                                       </button>
                                     )}
                                   </div>
@@ -629,7 +629,7 @@ const InvoiceCreationForm = ({
                                           }
                                         }}
                                         placeholder="Additional note (optional)..."
-                                        className="flex-1 px-3 py-2 border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 text-gray-700 placeholder-gray-400"
+                                        className="flex-1 px-3 py-2 border border-blue-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 text-gray-700 placeholder-gray-400"
                                       />
                                       <button
                                         type="button"

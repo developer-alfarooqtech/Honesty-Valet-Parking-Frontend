@@ -48,18 +48,19 @@ const BankStatements = () => {
     setCreateBankLoading(true);
     try {
       const response = await createBankAccount(bankData);
-
-      if (response.success) {
+      const isSuccess = response?.data?.success === true || response?.status === 201;
+      if (isSuccess) {
         toast.success("Bank account created successfully");
         setShowCreateBankModal(false);
         // Refresh bank accounts list
         await fetchBankAccounts();
       } else {
-        toast.error(response.message || "Failed to create bank account");
+        toast.error(response?.data?.message || "Failed to create bank account");
       }
     } catch (error) {
       console.error("Error creating bank account:", error);
-      toast.error("Failed to create bank account");
+      const message = error?.response?.data?.message || "Failed to create bank account";
+      toast.error(message);
     } finally {
       setCreateBankLoading(false);
     }
@@ -401,6 +402,9 @@ const BankStatements = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                       Description
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                      Group Payment
+                    </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">
                       Amount
                     </th>
@@ -423,6 +427,23 @@ const BankStatements = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {transaction.description || "-"}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {transaction.groupTotal && transaction.groupInvoices && transaction.groupInvoices.length > 1 ? (
+                          <div className="space-y-1">
+                            <div className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">
+                              Group Payment
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              Total: AED {parseFloat(transaction.groupTotal).toFixed(2)}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              ({transaction.groupInvoices.length} invoices: {transaction.groupInvoices.join(", ")})
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-xs">Individual</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
                         {transaction.amount}

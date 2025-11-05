@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Search, Calendar, X, DollarSign } from "lucide-react";
+import { Search, Calendar, X, DollarSign, XCircle } from "lucide-react";
 import useDebounce from "../hooks/useDebounce";
 import Pagination from "../components/Pagination";
 import CustomerSearch from "../components/PendingPayments_comp/CustomerSearch";
@@ -49,6 +49,8 @@ const PendingPayments = () => {
   const [selectedInvoices, setSelectedInvoices] = useState({});
   const [paymentData, setPaymentData] = useState({});
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [enteredTotalAmount, setEnteredTotalAmount] = useState("");
+  const [showDeclineModal, setShowDeclineModal] = useState(false);
 
   // Select all functionality
   const [selectAll, setSelectAll] = useState(false);
@@ -273,8 +275,25 @@ const PendingPayments = () => {
     };
   };
 
+  // Calculate total payment amount from selected invoices
+  const calculateTotalPaymentAmount = () => {
+    return Object.keys(paymentData).reduce((sum, invoiceId) => {
+      return sum + (parseFloat(paymentData[invoiceId]?.amount) || 0);
+    }, 0);
+  };
+
   // Handle payment submission
   const handlePaymentSubmit = () => {
+    const totalPaymentAmount = calculateTotalPaymentAmount();
+    const enteredAmount = parseFloat(enteredTotalAmount) || 0;
+
+    // Validate that entered amount matches total payment amount
+    if (enteredAmount !== totalPaymentAmount) {
+      setShowDeclineModal(true);
+      return;
+    }
+
+    // If amounts match, proceed to payment modal
     setShowPaymentModal(true);
   };
 
@@ -401,8 +420,25 @@ const PendingPayments = () => {
       {Object.keys(selectedInvoices).length > 0 && (
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
           <div className="flex justify-between items-center">
-            <div className="text-sm text-blue-800">
-              {Object.keys(selectedInvoices).length} invoice(s) selected
+            <div className="text-sm text-blue-800 flex flex-col md:flex-row md:items-center md:gap-4">
+              <span>
+                {Object.keys(selectedInvoices).length} invoice(s) selected
+              </span>
+              <span className="font-semibold">
+                Total Payment: AED {calculateTotalPaymentAmount().toFixed(2)}
+              </span>
+              <div className="flex items-center gap-2">
+                <label className="text-gray-700">Received Amount:</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={enteredTotalAmount}
+                  onChange={(e) => setEnteredTotalAmount(e.target.value)}
+                  className="w-28 p-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="0.00"
+                />
+              </div>
             </div>
             <button
               onClick={handlePaymentSubmit}
@@ -600,15 +636,42 @@ const PendingPayments = () => {
       {showPaymentModal && (
         <PaymentModal
           payments={getValidPayments()}
-          onClose={() => setShowPaymentModal(false)}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setEnteredTotalAmount("");
+          }}
           onSuccess={() => {
             setShowPaymentModal(false);
             setSelectedInvoices({});
             setPaymentData({});
+            setEnteredTotalAmount("");
             setSelectAll(false);
             fetchInvoices(currentPage);
           }}
         />
+      )}
+
+      {/* Mismatch Modal */}
+      {showDeclineModal && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full overflow-hidden">
+            <div className="p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-blue-600">Amount Mismatch</h3>
+            </div>
+            <div className="p-4 space-y-2 text-sm text-gray-700">
+              <p>The received amount does not match the total payment amount.</p>
+              <p>Please ensure both amounts are the same before processing.</p>
+            </div>
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-2 bg-gray-50">
+              <button
+                onClick={() => setShowDeclineModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
