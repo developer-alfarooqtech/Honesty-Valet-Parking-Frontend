@@ -200,9 +200,13 @@ const getDaysPastDue = (dateString) => {
                   <input
                     type="checkbox"
                     checked={selectedInvoices.some(inv => inv._id === invoice._id)}
-                    onChange={(e) => handleInvoiceCheckboxChange(invoice, e.target.checked)}
-                    disabled={ invoice.isCancelled}
-                    className="h-4 w-4 text-blue-500 focus:ring-blue-400 bg-blue-100 border-blue-300 rounded"
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handleInvoiceCheckboxChange(invoice, e.target.checked);
+                    }}
+                    disabled={invoice.isCancelled}
+                    className="h-4 w-4 text-blue-500 focus:ring-blue-400 bg-blue-100 border-blue-300 rounded cursor-pointer disabled:cursor-not-allowed"
+                    title={selectedInvoices.some(inv => inv._id === invoice._id) ? "Deselect invoice" : "Select invoice"}
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
