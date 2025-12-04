@@ -1,18 +1,22 @@
-import React, { useState, useEffect } from "react";
-import { ReceiptText, Search, Plus, Calendar, DollarSign, Clock, CheckSquare, X, FileText, FileSpreadsheet, ArrowRight, User, Building2, Edit } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { ReceiptText, Search, Plus, Calendar, DollarSign, Clock, CheckSquare, X, FileText, FileSpreadsheet, ArrowRight, User, Building2, Edit, Trash2, Printer } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Pagination from "../components/Pagination";
 import useDebounce from "../hooks/useDebounce";
 import CreditNoteDetailsModal from "../components/CreditNote_comp/CreditNoteDetailsModal";
 import CustomerSearch from "../components/Customer_comp/CustomerSearch";
 import InvoiceSearch from "../components/Invoice_comp/InvoiceSearch";
+import { printMultipleCreditNotes } from "../components/CreditNote_comp/PrintCreditNote";
 import {
   fetchAllCreditNotes,
   fetchCreditNoteStats,
   createInvoiceCreditNote,
   createIndependentCreditNote,
-  downloadCreditNotes
+  downloadCreditNotes,
+  updateCreditNote,
+  deleteCreditNote
 } from "../service/creditNoteService";
+import { fetchInvDetails } from "../service/invoicesService";
 
 const CreditNotes = () => {
   // View state - 'list', 'create-invoice', or 'create-independent'
@@ -34,6 +38,9 @@ const CreditNotes = () => {
   const [selectedCreditNotes, setSelectedCreditNotes] = useState([]);
   const [exportingPDF, setExportingPDF] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
+  const [printingCreditNotes, setPrintingCreditNotes] = useState(false);
+  const [includeSeal, setIncludeSeal] = useState(true);
+  const [includeSignature, setIncludeSignature] = useState(false);
   
   // Filter states
   const [startDate, setStartDate] = useState("");
@@ -50,6 +57,10 @@ const CreditNotes = () => {
   const [creditDate, setCreditDate] = useState(new Date().toISOString().split("T")[0]);
   const [description, setDescription] = useState("");
   const [processImmediately, setProcessImmediately] = useState(false); // Add this
+  const [invoiceDetails, setInvoiceDetails] = useState(null);
+  const [invoiceItemsLoading, setInvoiceItemsLoading] = useState(false);
+  const [invoiceItemsError, setInvoiceItemsError] = useState("");
+  const [selectedInvoiceItems, setSelectedInvoiceItems] = useState({});
   const [error, setError] = useState("");
   
   // Create form states - Independent
@@ -59,6 +70,10 @@ const CreditNotes = () => {
   const [independentDescription, setIndependentDescription] = useState("");
   const [independentReference, setIndependentReference] = useState("");
   const [independentProcessImmediately, setIndependentProcessImmediately] = useState(false); // Add this
+  const [editingCreditNote, setEditingCreditNote] = useState(null);
+  const [prefillInvoiceLineItems, setPrefillInvoiceLineItems] = useState([]);
+  const [invoicePrefillApplied, setInvoicePrefillApplied] = useState(false);
+  const [deletingCreditId, setDeletingCreditId] = useState(null);
   
   // Statistics
   const [stats, setStats] = useState({
@@ -87,6 +102,61 @@ const CreditNotes = () => {
     selectedCustomer,
     creditTypeFilter,
   ]);
+
+  useEffect(() => {
+    if (!selectedInvoice?._id) {
+      setInvoiceDetails(null);
+      setInvoiceItemsError("");
+      setSelectedInvoiceItems({});
+      setInvoiceItemsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchInvoiceDetails = async () => {
+      setInvoiceItemsLoading(true);
+      setInvoiceItemsError("");
+      try {
+        const response = await fetchInvDetails(selectedInvoice._id);
+        const data = response.data;
+
+        if (!isMounted) return;
+
+        if (data.success && data.invoice) {
+          setInvoiceDetails(data.invoice);
+        } else {
+          setInvoiceDetails(null);
+          setInvoiceItemsError(data.message || "Failed to load invoice items");
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        setInvoiceDetails(null);
+        setInvoiceItemsError(err.response?.data?.message || "Failed to load invoice items");
+      } finally {
+        if (isMounted) {
+          setInvoiceItemsLoading(false);
+        }
+      }
+    };
+
+    fetchInvoiceDetails();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedInvoice]);
+  
+  const formatDateForInput = (dateValue) => {
+    if (!dateValue) {
+      return new Date().toISOString().split("T")[0];
+    }
+    const parsed = new Date(dateValue);
+    if (Number.isNaN(parsed.getTime())) {
+      return new Date().toISOString().split("T")[0];
+    }
+    return parsed.toISOString().split("T")[0];
+  };
   
   const fetchCreditNotes = async () => {
     setLoading(true);
@@ -179,12 +249,322 @@ const CreditNotes = () => {
   };
   
   const formatCurrency = (amount) => {
-    return `AED ${parseFloat(amount).toFixed(2)}`;
+    const numericValue = Number(amount);
+    const safeValue = Number.isFinite(numericValue) ? numericValue : 0;
+    return `AED ${safeValue.toFixed(2)}`;
+  };
+
+  const invoiceLineItemGroups = useMemo(() => {
+    if (!invoiceDetails) return [];
+
+    const parseNumber = (value, fallback = 0) => {
+      const parsed = Number(value);
+      return Number.isNaN(parsed) ? fallback : parsed;
+    };
+
+    const resolveLineItemId = (item) => {
+      const rawId =
+        item?._id ??
+        item?.id ??
+        item?.itemId ??
+        item?.lineItemId;
+      return rawId ? rawId.toString() : "";
+    };
+
+    const buildSyntheticId = (itemType, index) => `${itemType}:${index}`;
+
+    const buildItem = (item, itemType, overrides = {}, index = 0) => {
+      const quantity = itemType === "credit" ? 1 : Math.max(parseNumber(item.quantity, 1), 0);
+      const unitPrice = itemType === "credit"
+        ? parseNumber(item.amount, 0)
+        : parseNumber(item.price, 0);
+      const resolvedId = resolveLineItemId(item);
+      const fallbackId = buildSyntheticId(itemType, index);
+      const finalId = resolvedId || fallbackId;
+      const keySeed = finalId;
+
+      return {
+        key: keySeed,
+        itemId: finalId,
+        itemType,
+        name:
+          overrides.name ||
+          item.title ||
+          item.product?.name ||
+          item.service?.name ||
+          item.note ||
+          "Invoice Item",
+        description:
+          overrides.description ||
+          item.description ||
+          item.note ||
+          item.additionalNote ||
+          "",
+        quantity: quantity || 1,
+        maxQuantity: itemType === "credit" ? 1 : quantity || 1,
+        unitPrice,
+        total: parseFloat(((quantity || 1) * unitPrice).toFixed(2)),
+        code: overrides.code || item.product?.code || item.service?.code || item.code || ""
+      };
+    };
+
+    const groups = [];
+
+    const productItems = (invoiceDetails.products || []).map((product, index) =>
+      buildItem(product, "product", {
+        name: product.product?.name || product.note || "Product Item",
+        description: product.additionalNote || product.note || "",
+        code: product.product?.code || product.product?.sku
+      }, index)
+    );
+    if (productItems.length) {
+      groups.push({ key: "products", label: "Product Items", items: productItems });
+    }
+
+    const serviceItems = (invoiceDetails.services || []).map((service, index) =>
+      buildItem(service, "service", {
+        name: service.service?.name || service.note || "Service Item",
+        description: service.additionalNote || service.note || "",
+        code: service.service?.code
+      }, index)
+    );
+    if (serviceItems.length) {
+      groups.push({ key: "services", label: "Service Items", items: serviceItems });
+    }
+
+    const creditItems = (invoiceDetails.credits || []).map((credit, index) =>
+      buildItem(credit, "credit", {
+        name: credit.title || "Invoice Credit",
+        description: credit.note || credit.additionalNote || "",
+        code: credit.title
+      }, index)
+    );
+    if (creditItems.length) {
+      groups.push({ key: "credits", label: "Invoice Credits", items: creditItems });
+    }
+
+    return groups;
+  }, [invoiceDetails]);
+
+  useEffect(() => {
+    if (!editingCreditNote || editingCreditNote.type !== "invoice") return;
+    if (!prefillInvoiceLineItems.length) return;
+    if (!invoiceLineItemGroups.length) return;
+    if (invoicePrefillApplied) return;
+
+    const nextSelections = {};
+
+    invoiceLineItemGroups.forEach((group) => {
+      group.items.forEach((item) => {
+        const matched = prefillInvoiceLineItems.find(
+          (prefill) =>
+            String(prefill.itemId) === String(item.itemId) &&
+            (prefill.itemType || item.itemType) === item.itemType
+        );
+
+        if (matched) {
+          const rawQuantity = item.itemType === "credit" ? 1 : Number(matched.quantity);
+          const safeQuantity = item.itemType === "credit"
+            ? 1
+            : Number.isFinite(rawQuantity) && rawQuantity > 0
+              ? rawQuantity
+              : Number(item.quantity) || 1;
+
+          const parsedUnitPrice = Number(matched.unitPrice);
+          const safeUnitPrice = Number.isFinite(parsedUnitPrice)
+            ? parseFloat(parsedUnitPrice.toFixed(2))
+            : Number(item.unitPrice) || 0;
+
+          nextSelections[item.key] = {
+            key: item.key,
+            itemId: item.itemId,
+            itemType: item.itemType,
+            quantity: safeQuantity,
+            maxQuantity: item.maxQuantity || item.quantity || 1,
+            unitPrice: safeUnitPrice.toFixed(2)
+          };
+        }
+      });
+    });
+
+    if (Object.keys(nextSelections).length) {
+      setSelectedInvoiceItems(nextSelections);
+    }
+    setInvoicePrefillApplied(true);
+  }, [editingCreditNote, invoiceLineItemGroups, prefillInvoiceLineItems, invoicePrefillApplied]);
+
+  const selectedInvoiceItemsArray = useMemo(
+    () => Object.values(selectedInvoiceItems || {}),
+    [selectedInvoiceItems]
+  );
+
+  const computedCreditAmount = useMemo(() => {
+    if (!selectedInvoiceItemsArray.length) return 0;
+    const total = selectedInvoiceItemsArray.reduce((sum, item) => {
+      const qty = Number(item.quantity) || 0;
+      const unitPrice = Number(item.unitPrice) || 0;
+      return sum + qty * unitPrice;
+    }, 0);
+    return parseFloat(total.toFixed(2));
+  }, [selectedInvoiceItemsArray]);
+
+  const hasInvoiceItemSelection = selectedInvoiceItemsArray.length > 0;
+  const finalCreditAmount = hasInvoiceItemSelection ? computedCreditAmount : creditAmount;
+  const isEditingInvoiceCredit = editingCreditNote?.type === "invoice";
+  const isEditingIndependentCredit = editingCreditNote?.type === "independent";
+
+  const handleInvoiceItemToggle = (lineItem) => {
+    if (!lineItem) return;
+    if (!lineItem.itemId) {
+      toast.error("This invoice row is missing its identifier. Please refresh the invoice or contact support.");
+      return;
+    }
+
+    setSelectedInvoiceItems((prev) => {
+      const updated = { ...prev };
+      if (updated[lineItem.key]) {
+        delete updated[lineItem.key];
+        return updated;
+      }
+
+      updated[lineItem.key] = {
+        key: lineItem.key,
+        itemId: lineItem.itemId,
+        itemType: lineItem.itemType,
+        name: lineItem.name,
+        unitPrice:
+          lineItem.unitPrice === undefined || lineItem.unitPrice === null
+            ? ""
+            : Number(lineItem.unitPrice).toFixed(2),
+        quantity: lineItem.itemType === "credit" ? 1 : lineItem.maxQuantity || lineItem.quantity || 1,
+        maxQuantity: lineItem.itemType === "credit" ? 1 : lineItem.maxQuantity || lineItem.quantity || 1
+      };
+      return updated;
+    });
+  };
+
+  const handleInvoiceItemQuantityChange = (lineItemKey, value) => {
+    setSelectedInvoiceItems((prev) => {
+      if (!prev[lineItemKey]) {
+        return prev;
+      }
+
+      const updated = { ...prev };
+      const currentItem = updated[lineItemKey];
+
+      if (currentItem.itemType === "credit") {
+        return prev;
+      }
+
+      let parsedValue = Number(value);
+      if (Number.isNaN(parsedValue)) {
+        parsedValue = 0;
+      }
+
+      if (parsedValue <= 0) {
+        delete updated[lineItemKey];
+        return updated;
+      }
+
+      const maxQuantity = currentItem.maxQuantity || 1;
+      const safeValue = Math.min(maxQuantity, parsedValue);
+
+      updated[lineItemKey] = {
+        ...currentItem,
+        quantity: parseFloat(safeValue.toFixed(3))
+      };
+
+      return updated;
+    });
+  };
+
+  const handleInvoiceItemPriceChange = (lineItemKey, value) => {
+    setSelectedInvoiceItems((prev) => {
+      if (!prev[lineItemKey]) {
+        return prev;
+      }
+
+      const updated = { ...prev };
+      const currentItem = updated[lineItemKey];
+
+      if (value === "") {
+        updated[lineItemKey] = {
+          ...currentItem,
+          unitPrice: ""
+        };
+        return updated;
+      }
+
+      const parsedValue = Number(value);
+      if (Number.isNaN(parsedValue) || parsedValue < 0) {
+        return prev;
+      }
+
+      // Keep the raw user input so the field stays editable while still validating the number
+      updated[lineItemKey] = {
+        ...currentItem,
+        unitPrice: value
+      };
+
+      return updated;
+    });
   };
   
   const handleCreditNoteSelect = (creditNote) => {
     setSelectedCreditNote(creditNote);
     setIsModalOpen(true);
+  };
+
+  const handleEditCreditNote = (creditNote) => {
+    if (!creditNote) return;
+
+    setEditingCreditNote(creditNote);
+    setError("");
+    setSelectedCreditNote(null);
+    setIsModalOpen(false);
+
+    if (creditNote.type === "invoice") {
+      setView("create-invoice");
+      setSelectedInvoice(creditNote.invoice || null);
+      setInvoiceDetails(null);
+      setInvoiceItemsError("");
+      setSelectedInvoiceItems({});
+      setCreditAmount(creditNote.creditAmount || 0);
+      setCreditDate(formatDateForInput(creditNote.date));
+      setDescription(creditNote.description || "");
+      setProcessImmediately(creditNote.status === "processed");
+      setPrefillInvoiceLineItems(creditNote.items || creditNote.lineItems || []);
+      setInvoicePrefillApplied(false);
+    } else {
+      setView("create-independent");
+      setIndependentCustomer(creditNote.customer || null);
+      setIndependentAmount(creditNote.creditAmount || 0);
+      setIndependentDate(formatDateForInput(creditNote.date));
+      setIndependentDescription(creditNote.description || "");
+      setIndependentReference(creditNote.reference || "");
+      setIndependentProcessImmediately(creditNote.status === "processed");
+    }
+  };
+
+  const handleInvoiceSelect = (invoice) => {
+    setSelectedInvoice(invoice);
+    setInvoiceDetails(null);
+    setSelectedInvoiceItems({});
+    setInvoiceItemsError("");
+    setCreditAmount(0);
+    setPrefillInvoiceLineItems([]);
+    setInvoicePrefillApplied(false);
+  };
+
+  const handleClearInvoiceSelection = () => {
+    setSelectedInvoice(null);
+    setInvoiceDetails(null);
+    setSelectedInvoiceItems({});
+    setInvoiceItemsError("");
+    setCreditAmount(0);
+    setPrefillInvoiceLineItems([]);
+    setInvoicePrefillApplied(false);
+    setEditingCreditNote((prev) => (prev?.type === "invoice" ? null : prev));
   };
   
   const closeCreditNoteDetails = () => {
@@ -199,9 +579,14 @@ const CreditNotes = () => {
         note._id === updatedCreditNote._id ? updatedCreditNote : note
       )
     );
+    setSelectedCreditNote((prev) =>
+      prev && prev._id === updatedCreditNote._id ? { ...prev, ...updatedCreditNote } : prev
+    );
+    setEditingCreditNote((prev) =>
+      prev && prev._id === updatedCreditNote._id ? { ...prev, ...updatedCreditNote } : prev
+    );
     // Refresh stats
     fetchStats();
-    toast.success("Credit note processed successfully");
   };
 
   const handleCreditNoteCheckboxChange = (creditNote, checked) => {
@@ -212,6 +597,49 @@ const CreditNotes = () => {
         prev.filter((cn) => cn._id !== creditNote._id)
       );
     }
+  };
+
+  const confirmDeletion = (creditNote) => {
+    const name = creditNote?.creditNoteNumber || "this credit note";
+    return window.confirm(
+      `Deleting ${name} will also roll back any applied amounts. Do you want to continue?`
+    );
+  };
+
+  const handleTableDelete = async (creditNote) => {
+    if (!creditNote?._id || !confirmDeletion(creditNote)) {
+      return;
+    }
+
+    setDeletingCreditId(creditNote._id);
+    try {
+      await deleteCreditNote(creditNote._id);
+      handleCreditNoteDeleted(creditNote._id);
+      toast.success("Credit note deleted successfully");
+    } catch (error) {
+      console.error("Error deleting credit note:", error);
+      toast.error(error?.response?.data?.message || "Failed to delete credit note");
+    } finally {
+      setDeletingCreditId(null);
+    }
+  };
+
+  const handleCreditNoteDeleted = (deletedId) => {
+    const wasEditingInvoice =
+      editingCreditNote && editingCreditNote._id === deletedId && editingCreditNote.type === "invoice";
+    const wasEditingIndependent =
+      editingCreditNote && editingCreditNote._id === deletedId && editingCreditNote.type === "independent";
+
+    setCreditNotes((prev) => prev.filter((note) => note._id !== deletedId));
+    setSelectedCreditNotes((prev) => prev.filter((note) => note._id !== deletedId));
+    setSelectedCreditNote((prev) => (prev && prev._id === deletedId ? null : prev));
+    setEditingCreditNote((prev) => (prev && prev._id === deletedId ? null : prev));
+    if (wasEditingInvoice) {
+      handleClearInvoiceSelection();
+    } else if (wasEditingIndependent) {
+      resetIndependentCreditNoteForm();
+    }
+    fetchStats();
   };
   
   const handlePageChange = (page) => {
@@ -235,38 +663,86 @@ const CreditNotes = () => {
       return;
     }
     
-    if (!creditAmount || creditAmount <= 0) {
+    if (hasInvoiceItemSelection) {
+      const invalidItem = selectedInvoiceItemsArray.find((item) => {
+        const qtyInvalid = !item.quantity || item.quantity <= 0;
+        const priceValue = Number(item.unitPrice);
+        const priceInvalid = !priceValue || priceValue <= 0;
+        return qtyInvalid || priceInvalid;
+      });
+      if (invalidItem) {
+        setError("Selected invoice items must have quantity and unit price greater than 0");
+        toast.error("Selected invoice items must have quantity and unit price greater than 0");
+        return;
+      }
+    }
+
+    const calculatedAmount = hasInvoiceItemSelection
+      ? computedCreditAmount
+      : parseFloat(creditAmount);
+
+    if (!calculatedAmount || calculatedAmount <= 0) {
       setError("Please enter a valid credit amount");
       toast.error("Please enter a valid credit amount");
       return;
     }
 
-    
     setLoading(true);
     try {
       const creditNoteData = {
         invoiceId: selectedInvoice._id,
-        creditAmount: parseFloat(creditAmount),
+        creditAmount: parseFloat(calculatedAmount.toFixed(2)),
         description: description.trim(),
         date: creditDate,
         processImmediately: processImmediately
       };
 
-      const response = await createInvoiceCreditNote(creditNoteData);
+      if (hasInvoiceItemSelection) {
+        const sanitizedLineItems = selectedInvoiceItemsArray
+          .filter((item) => item?.itemId && item?.itemType)
+          .map((item) => ({
+            itemId: item.itemId?.toString?.() || "",
+            itemType: item.itemType,
+            quantity: item.itemType === "credit" ? 1 : Number(item.quantity) || 0,
+            unitPrice: Number(Number(item.unitPrice).toFixed(2))
+          }));
+
+        if (!sanitizedLineItems.length) {
+          throw new Error("Unable to process selected line items. Please re-select the invoice rows and try again.");
+        }
+
+        const hasInvalidQuantity = sanitizedLineItems.some((item) => item.quantity <= 0);
+        const hasInvalidUnitPrice = sanitizedLineItems.some((item) => !Number.isFinite(item.unitPrice) || item.unitPrice <= 0);
+
+        if (hasInvalidQuantity || hasInvalidUnitPrice) {
+          throw new Error("Selected invoice items must have valid quantities and unit prices greater than 0.");
+        }
+
+        creditNoteData.lineItems = sanitizedLineItems;
+      }
+
+      const response = isEditingInvoiceCredit
+        ? await updateCreditNote(editingCreditNote._id, creditNoteData)
+        : await createInvoiceCreditNote(creditNoteData);
       const data = response.data;
 
       if (data.success) {
-        toast.success("Invoice credit note created successfully");
+        toast.success(
+          isEditingInvoiceCredit
+            ? "Invoice credit note updated successfully"
+            : "Invoice credit note created successfully"
+        );
         setView("list");
         resetInvoiceCreditNoteForm();
         fetchCreditNotes();
         fetchStats();
       } else {
-        setError(data.message || "Failed to create credit note");
-        toast.error(data.message || "Failed to create credit note");
+        const failureMessage = data.message || (isEditingInvoiceCredit ? "Failed to update credit note" : "Failed to create credit note");
+        setError(failureMessage);
+        toast.error(failureMessage);
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.message || "Failed to create credit note";
+      const errorMessage = err.response?.data?.message || err.message || (isEditingInvoiceCredit ? "Failed to update credit note" : "Failed to create credit note");
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -300,21 +776,28 @@ const CreditNotes = () => {
         processImmediately: independentProcessImmediately
       };
 
-      const response = await createIndependentCreditNote(creditNoteData);
+      const response = isEditingIndependentCredit
+        ? await updateCreditNote(editingCreditNote._id, creditNoteData)
+        : await createIndependentCreditNote(creditNoteData);
       const data = response.data;
 
       if (data.success) {
-        toast.success("Independent credit note created successfully");
+        toast.success(
+          isEditingIndependentCredit
+            ? "Independent credit note updated successfully"
+            : "Independent credit note created successfully"
+        );
         setView("list");
         resetIndependentCreditNoteForm();
         fetchCreditNotes();
         fetchStats();
       } else {
-        setError(data.message || "Failed to create credit note");
-        toast.error(data.message || "Failed to create credit note");
+        const failureMessage = data.message || (isEditingIndependentCredit ? "Failed to update credit note" : "Failed to create credit note");
+        setError(failureMessage);
+        toast.error(failureMessage);
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.message || "Failed to create credit note";
+      const errorMessage = err.response?.data?.message || (isEditingIndependentCredit ? "Failed to update credit note" : "Failed to create credit note");
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -324,11 +807,20 @@ const CreditNotes = () => {
   
   const resetInvoiceCreditNoteForm = () => {
     setSelectedInvoice(null);
+    setInvoiceDetails(null);
+    setSelectedInvoiceItems({});
+    setInvoiceItemsError("");
+    setInvoiceItemsLoading(false);
     setCreditAmount(0);
     setCreditDate(new Date().toISOString().split("T")[0]);
     setDescription("");
     setProcessImmediately(false); // Add this
     setError("");
+    setPrefillInvoiceLineItems([]);
+    setInvoicePrefillApplied(false);
+    if (editingCreditNote?.type === "invoice") {
+      setEditingCreditNote(null);
+    }
   };
   
   const resetIndependentCreditNoteForm = () => {
@@ -339,6 +831,9 @@ const CreditNotes = () => {
     setIndependentReference("");
     setIndependentProcessImmediately(false); // Add this
     setError("");
+    if (editingCreditNote?.type === "independent") {
+      setEditingCreditNote(null);
+    }
   };
   
   const downloadPdf = async () => {
@@ -368,6 +863,15 @@ const CreditNotes = () => {
       setExportingExcel(false);
     }
   };
+
+  const handlePrintSelectedCreditNotes = async () => {
+    await printMultipleCreditNotes({
+      selectedCreditNotes,
+      setPrintingCreditNotes,
+      includeSeal,
+      includeSignature,
+    });
+  };
   
   return (
     <div className="p-6 bg-blue-50 min-h-screen">
@@ -388,8 +892,9 @@ const CreditNotes = () => {
             <div className="flex gap-3">
               <button
                 onClick={() => {
-                  setView("create-invoice");
+                  resetIndependentCreditNoteForm();
                   resetInvoiceCreditNoteForm();
+                  setView("create-invoice");
                 }}
                 className="flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all duration-300 shadow-lg"
               >
@@ -398,8 +903,9 @@ const CreditNotes = () => {
               </button>
               <button
                 onClick={() => {
-                  setView("create-independent");
+                  resetInvoiceCreditNoteForm();
                   resetIndependentCreditNoteForm();
+                  setView("create-independent");
                 }}
                 className="flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg transition-all duration-300 shadow-lg"
               >
@@ -693,6 +1199,39 @@ const CreditNotes = () => {
 
             {/* Credit Notes Table */}
             <div className="bg-white border border-blue-200 rounded-xl shadow-lg overflow-hidden">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between px-4 sm:px-6 py-4 bg-blue-50/60 border-b border-blue-100">
+              
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={includeSeal}
+                        onChange={(e) => setIncludeSeal(e.target.checked)}
+                        className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-2">Include Seal</span>
+                    </label>
+                    <label className="flex items-center text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={includeSignature}
+                        onChange={(e) => setIncludeSignature(e.target.checked)}
+                        className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-2">Include Signature</span>
+                    </label>
+                  </div>
+                  <button
+                    onClick={handlePrintSelectedCreditNotes}
+                    disabled={printingCreditNotes || selectedCreditNotes.length === 0}
+                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm font-medium"
+                  >
+                    <Printer size={16} />
+                    {printingCreditNotes ? "Preparing..." : "Print Selected"}
+                  </button>
+                </div>
+              </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-blue-200">
                   <thead className="bg-blue-600">
@@ -717,6 +1256,7 @@ const CreditNotes = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Amount</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-blue-100">
@@ -802,6 +1342,38 @@ const CreditNotes = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                             {formatDate(creditNote.date)}
                           </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleEditCreditNote(creditNote)}
+                                className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
+                              >
+                                <Edit size={14} className="mr-1" />
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleTableDelete(creditNote)}
+                                disabled={deletingCreditId === creditNote._id}
+                                className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg border ${
+                                  deletingCreditId === creditNote._id
+                                    ? "bg-red-100 text-red-400 border-red-200 cursor-not-allowed"
+                                    : "bg-red-50 text-red-600 hover:bg-red-100 border-red-200"
+                                }`}
+                              >
+                                {deletingCreditId === creditNote._id ? (
+                                  <span className="flex items-center">
+                                    <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1"></div>
+                                    Deleting
+                                  </span>
+                                ) : (
+                                  <>
+                                    <Trash2 size={14} className="mr-1" />
+                                    Delete
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       ))
                     )}
@@ -830,19 +1402,200 @@ const CreditNotes = () => {
                 <FileText size={24} className="text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-slate-800">Create Credit Note Against Invoice</h2>
-                <p className="text-slate-600 text-sm">Issue a credit note for a specific customer invoice</p>
+                <h2 className="text-2xl font-bold text-slate-800">
+                  {isEditingInvoiceCredit ? "Update Credit Note" : "Create Credit Note Against Invoice"}
+                </h2>
+                <p className="text-slate-600 text-sm">
+                  {isEditingInvoiceCredit
+                    ? "Modify the invoice items and details for this credit note"
+                    : "Issue a credit note for a specific customer invoice"}
+                </p>
               </div>
             </div>
+
+            {isEditingInvoiceCredit && editingCreditNote && (
+              <div className="mb-6 p-4 border border-blue-200 rounded-lg bg-blue-50 text-sm text-blue-700 flex items-center justify-between">
+                <span>
+                  Editing credit note <strong>#{editingCreditNote.creditNoteNumber}</strong>
+                  {editingCreditNote.status === 'processed' && " (already processed)"}
+                </span>
+                <button
+                  onClick={resetInvoiceCreditNoteForm}
+                  className="text-xs font-semibold text-blue-700 hover:underline"
+                >
+                  Exit editing
+                </button>
+              </div>
+            )}
 
             <div className="space-y-6">
               {/* Invoice Selection */}
               <InvoiceSearch
-                onInvoiceSelect={setSelectedInvoice}
+                onInvoiceSelect={handleInvoiceSelect}
                 selectedInvoice={selectedInvoice}
-                onClearInvoice={() => setSelectedInvoice(null)}
+                onClearInvoice={handleClearInvoiceSelection}
                 customerId={selectedInvoice?.customer?._id || ""}
               />
+
+              {/* Invoice line item selection */}
+              <div className="border border-slate-200 rounded-xl p-5 bg-gradient-to-b from-slate-50 to-white">
+                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-4">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">Invoice line items</p>
+                    <p className="text-xs text-slate-500">
+                      Select which rows from the invoice should be credited. The credit amount will update automatically.
+                    </p>
+                  </div>
+                  {selectedInvoice && (
+                    <div className="text-xs text-slate-500">
+                      Invoice total: <span className="font-semibold text-slate-700">{formatCurrency(selectedInvoice.totalAmount || invoiceDetails?.totalAmount || 0)}</span>
+                    </div>
+                  )}
+                </div>
+
+                {!selectedInvoice ? (
+                  <div className="p-4 bg-white border border-dashed border-slate-200 rounded-lg text-slate-500 text-sm text-center">
+                    Select an invoice to view its products, services, and credits.
+                  </div>
+                ) : invoiceItemsLoading ? (
+                  <div className="p-6 flex items-center justify-center text-slate-600">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-slate-500 border-t-transparent mr-3"></div>
+                    Loading invoice items...
+                  </div>
+                ) : invoiceItemsError ? (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                    {invoiceItemsError}
+                  </div>
+                ) : invoiceLineItemGroups.length === 0 ? (
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-sm">
+                    No line items were found for this invoice.
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {invoiceLineItemGroups.map((group) => (
+                      <div key={group.key} className="bg-white border border-slate-200 rounded-lg shadow-sm">
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                          <div className="font-semibold text-slate-700">{group.label}</div>
+                          <span className="text-xs text-slate-500">{group.items.length} items</span>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-slate-100 text-sm">
+                            <thead className="bg-slate-50 text-slate-600 font-medium">
+                              <tr>
+                                <th className="px-4 py-2 text-left">Select</th>
+                                <th className="px-4 py-2 text-left">Item</th>
+                                <th className="px-4 py-2 text-center">Invoice Qty</th>
+                                <th className="px-4 py-2 text-right">
+                                  <div>Unit Price</div>
+                                  <div className="text-[10px] text-slate-400 font-normal">Invoice / Credit</div>
+                                </th>
+                                <th className="px-4 py-2 text-right">
+                                  <div>Line Total</div>
+                                  <div className="text-[10px] text-slate-400 font-normal">Invoice / Credit</div>
+                                </th>
+                                <th className="px-4 py-2 text-right">Credit Qty</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {group.items.map((item) => {
+                                const selectedEntry = selectedInvoiceItems[item.key];
+                                const isSelected = Boolean(selectedEntry);
+                                const selectedQty = selectedEntry?.quantity ?? item.quantity;
+                                const defaultUnitPrice = Number(item.unitPrice || 0).toFixed(2);
+                                const selectedUnitPrice = selectedEntry?.unitPrice ?? defaultUnitPrice;
+                                const creditUnitPriceNumber = Number(selectedUnitPrice) || 0;
+                                const effectiveQuantity = item.itemType === "credit" ? 1 : Number(selectedQty) || 0;
+                                const creditLineTotal = parseFloat((creditUnitPriceNumber * effectiveQuantity).toFixed(2));
+
+                                return (
+                                  <tr key={item.key} className="bg-white">
+                                    <td className="px-4 py-3">
+                                      <input
+                                        type="checkbox"
+                                        className="rounded border-slate-300 text-slate-600 focus:ring-slate-500"
+                                        checked={isSelected}
+                                        onChange={() => handleInvoiceItemToggle(item)}
+                                      />
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <div className="font-medium text-slate-800">{item.name}</div>
+                                      {item.description && (
+                                        <div className="text-xs text-slate-500 mt-0.5">{item.description}</div>
+                                      )}
+                                      {item.code && (
+                                        <div className="text-xs text-slate-400 mt-0.5">Code: {item.code}</div>
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-slate-600">{item.quantity}</td>
+                                    <td className="px-4 py-3 text-right text-slate-600">
+                                      <div className="text-xs text-slate-400 mb-1">
+                                        Invoice: {formatCurrency(item.unitPrice)}
+                                      </div>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={isSelected ? selectedUnitPrice : ""}
+                                        onChange={(e) => handleInvoiceItemPriceChange(item.key, e.target.value)}
+                                        disabled={!isSelected}
+                                        placeholder={defaultUnitPrice}
+                                        className={`w-28 px-2 py-1 text-right border rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-sm ${
+                                            isSelected
+                                              ? "bg-white border-slate-300"
+                                              : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                                          }`}
+                                      />
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                      <div className="text-xs text-slate-400">Invoice: {formatCurrency(item.total)}</div>
+                                      <div className={`text-sm font-semibold ${isSelected ? "text-slate-800" : "text-slate-400"}`}>
+                                        {formatCurrency(creditLineTotal)}
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                      {item.itemType === "credit" ? (
+                                        <span className="text-xs text-slate-500">Full amount</span>
+                                      ) : (
+                                        <input
+                                          type="number"
+                                          min="0.01"
+                                          step="0.01"
+                                          max={item.maxQuantity}
+                                          value={isSelected ? selectedQty : ""}
+                                          onChange={(e) => handleInvoiceItemQuantityChange(item.key, e.target.value)}
+                                          disabled={!isSelected}
+                                          className={`w-24 px-2 py-1 text-right border rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-sm ${
+                                            isSelected ? "bg-white border-slate-300" : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                                          }`}
+                                          placeholder={item.quantity}
+                                        />
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {selectedInvoice && (
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-white border border-slate-200 rounded-lg">
+                      <p className="text-xs uppercase text-slate-500 tracking-wide">Selected items</p>
+                      <p className="text-2xl font-bold text-slate-700">{selectedInvoiceItemsArray.length}</p>
+                    </div>
+                    <div className="p-4 bg-gradient-to-r from-slate-600 to-slate-700 rounded-lg text-white">
+                      <p className="text-xs uppercase tracking-wide text-white/70">Auto calculated credit</p>
+                      <p className="text-2xl font-bold">{formatCurrency(computedCreditAmount)}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Credit Amount and Date */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -850,15 +1603,30 @@ const CreditNotes = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Credit Amount (AED) <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={creditAmount}
-                    onChange={(e) => setCreditAmount(parseFloat(e.target.value) || 0)}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-gray-700"
-                    placeholder="0.00"
-                  />
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={finalCreditAmount}
+                      onChange={(e) => setCreditAmount(parseFloat(e.target.value) || 0)}
+                      readOnly={hasInvoiceItemSelection}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-gray-700 ${
+                        hasInvoiceItemSelection ? "bg-slate-100 cursor-not-allowed" : "bg-gray-50"
+                      }`}
+                      placeholder="0.00"
+                    />
+                    {hasInvoiceItemSelection && (
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">
+                        Auto
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {hasInvoiceItemSelection
+                      ? "Amount is calculated from the selected invoice items."
+                      : "Enter an amount if you are not selecting specific line items."}
+                  </p>
                 </div>
 
                 <div>
@@ -923,9 +1691,14 @@ const CreditNotes = () => {
                 <button
                   type="button"
                   onClick={handleCreateInvoiceCreditNote}
-                  disabled={loading || !selectedInvoice || !creditAmount }
+                  disabled={
+                    loading ||
+                    !selectedInvoice ||
+                    finalCreditAmount <= 0 ||
+                    invoiceItemsLoading
+                  }
                   className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
-                    loading || !selectedInvoice || !creditAmount
+                    loading || !selectedInvoice || finalCreditAmount <= 0 || invoiceItemsLoading
                       ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                       : "bg-gradient-to-r from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700 text-white shadow-lg"
                   }`}
@@ -933,11 +1706,15 @@ const CreditNotes = () => {
                   {loading ? (
                     <div className="flex items-center">
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                      Creating...
+                      {isEditingInvoiceCredit ? "Updating..." : "Creating..."}
                     </div>
                   ) : (
                     <>
-                      {processImmediately ? "Create & Process Credit Note" : "Create Credit Note"}
+                      {isEditingInvoiceCredit
+                        ? "Update Credit Note"
+                        : processImmediately
+                        ? "Create & Process Credit Note"
+                        : "Create Credit Note"}
                     </>
                   )}
                 </button>
@@ -952,10 +1729,30 @@ const CreditNotes = () => {
                 <Building2 size={24} className="text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-slate-800">Create Independent Credit Note</h2>
-                <p className="text-slate-600 text-sm">Issue a standalone credit note for a customer</p>
+                <h2 className="text-2xl font-bold text-slate-800">
+                  {isEditingIndependentCredit ? "Update Independent Credit Note" : "Create Independent Credit Note"}
+                </h2>
+                <p className="text-slate-600 text-sm">
+                  {isEditingIndependentCredit
+                    ? "Edit the standalone credit details for this customer"
+                    : "Issue a standalone credit note for a customer"}
+                </p>
               </div>
             </div>
+
+            {isEditingIndependentCredit && editingCreditNote && (
+              <div className="mb-6 p-4 border border-blue-200 rounded-lg bg-blue-50 text-sm text-blue-700 flex items-center justify-between">
+                <span>
+                  Editing credit note <strong>#{editingCreditNote.creditNoteNumber}</strong>
+                </span>
+                <button
+                  onClick={resetIndependentCreditNoteForm}
+                  className="text-xs font-semibold text-blue-700 hover:underline"
+                >
+                  Exit editing
+                </button>
+              </div>
+            )}
 
             <div className="space-y-6">
               {/* Customer Selection */}
@@ -1090,11 +1887,15 @@ const CreditNotes = () => {
                   {loading ? (
                     <div className="flex items-center">
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                      Creating...
+                      {isEditingIndependentCredit ? "Updating..." : "Creating..."}
                     </div>
                   ) : (
                     <>
-                      {independentProcessImmediately ? "Create & Process Credit Note" : "Create Credit Note"}
+                      {isEditingIndependentCredit
+                        ? "Update Credit Note"
+                        : independentProcessImmediately
+                        ? "Create & Process Credit Note"
+                        : "Create Credit Note"}
                     </>
                   )}
                 </button>
@@ -1109,6 +1910,8 @@ const CreditNotes = () => {
           isOpen={isModalOpen}
           onClose={closeCreditNoteDetails}
           onUpdate={handleCreditNoteUpdate}
+          onEdit={handleEditCreditNote}
+          onDelete={handleCreditNoteDeleted}
         />
       </div>
     </div>

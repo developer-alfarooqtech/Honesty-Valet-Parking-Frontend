@@ -1,14 +1,28 @@
 import React, { useState } from "react";
-import { X, ReceiptText, FileText, Calendar, User, DollarSign, MessageCircle, CheckCircle, Clock, AlertCircle } from "lucide-react";
-import { processCreditNote, cancelCreditNote } from "../../service/creditNoteService";
+import { X, ReceiptText, FileText, Calendar, User, DollarSign, MessageCircle, CheckCircle, AlertCircle, Printer } from "lucide-react";
+import { processCreditNote, cancelCreditNote, deleteCreditNote } from "../../service/creditNoteService";
 import { toast } from "react-hot-toast";
+import { printMultipleCreditNotes } from "./PrintCreditNote";
 
-const CreditNoteDetailsModal = ({ creditNote, isOpen, onClose, onUpdate }) => {
+const CreditNoteDetailsModal = ({ creditNote, isOpen, onClose, onUpdate, onEdit, onDelete }) => {
   const [showProcessModal, setShowProcessModal] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [printingCurrentCredit, setPrintingCurrentCredit] = useState(false);
 
   if (!creditNote || !isOpen) return null;
+
+  const resolvedLineItems = Array.isArray(creditNote.items) && creditNote.items.length > 0
+    ? creditNote.items
+    : Array.isArray(creditNote.lineItems)
+    ? creditNote.lineItems
+    : [];
+  const hasLineItems = resolvedLineItems.length > 0;
+  const resolvedVatRate = Number.isFinite(Number(creditNote.vatRate))
+    ? Number(creditNote.vatRate)
+    : 5;
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -19,7 +33,34 @@ const CreditNoteDetailsModal = ({ creditNote, isOpen, onClose, onUpdate }) => {
   };
 
   const formatCurrency = (amount) => {
-    return `AED ${parseFloat(amount).toFixed(2)}`;
+    const numericValue = Number(amount);
+    const safeValue = Number.isFinite(numericValue) ? numericValue : 0;
+    return `AED ${safeValue.toFixed(2)}`;
+  };
+
+  const calculateLineTotal = (item) => {
+    const qty = item?.itemType === "credit"
+      ? 1
+      : Number(item?.creditedQuantity ?? item?.quantity) || 0;
+    const price = Number(item?.unitPrice ?? item?.price) || 0;
+    return parseFloat((qty * price).toFixed(2));
+  };
+
+  const handlePrintCreditNote = async () => {
+    await printMultipleCreditNotes({
+      selectedCreditNotes: [creditNote],
+      setPrintingCreditNotes: setPrintingCurrentCredit,
+    });
+  };
+
+  const handleEditCreditNote = () => {
+    if (creditNote.status === "cancelled") {
+      toast.error("Cancelled credit notes cannot be edited");
+      return;
+    }
+    if (onEdit) {
+      onEdit(creditNote);
+    }
   };
 
   const handleProcessCreditNote = async () => {
@@ -76,6 +117,26 @@ const CreditNoteDetailsModal = ({ creditNote, isOpen, onClose, onUpdate }) => {
     }
   };
 
+  const handleDeleteCreditNote = async () => {
+    setDeleting(true);
+    try {
+      await deleteCreditNote(creditNote._id);
+
+      if (onDelete) {
+        onDelete(creditNote._id);
+      }
+
+      setDeleting(false);
+      setShowDeleteModal(false);
+      onClose();
+      toast.success("Credit note deleted successfully");
+    } catch (error) {
+      console.error("Error deleting credit note:", error);
+      setDeleting(false);
+      toast.error(error?.response?.data?.message || "Failed to delete credit note");
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-2xl border border-blue-200 w-full max-w-4xl max-h-[90vh] overflow-hidden">
@@ -93,6 +154,22 @@ const CreditNoteDetailsModal = ({ creditNote, isOpen, onClose, onUpdate }) => {
             </div>
           </div>
           <div className="flex items-center space-x-2">
+            <button
+              onClick={handlePrintCreditNote}
+              disabled={printingCurrentCredit}
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors font-medium border border-white/30 disabled:opacity-60"
+            >
+              <Printer className="w-4 h-4" />
+              {printingCurrentCredit ? "Preparing..." : "Print"}
+            </button>
+            {creditNote.status !== 'cancelled' && (
+              <button
+                onClick={handleEditCreditNote}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+              >
+                Edit Credit
+              </button>
+            )}
             {creditNote.status === 'pending' && (
               <>
                 <button
@@ -117,6 +194,13 @@ const CreditNoteDetailsModal = ({ creditNote, isOpen, onClose, onUpdate }) => {
                 </button>
               </>
             )}
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              disabled={deleting}
+              className="bg-red-100 hover:bg-red-200 text-red-600 px-4 py-2 rounded-lg transition-colors font-medium disabled:opacity-60"
+            >
+              Delete
+            </button>
             <button
               onClick={onClose}
               className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all duration-300"
@@ -184,6 +268,16 @@ const CreditNoteDetailsModal = ({ creditNote, isOpen, onClose, onUpdate }) => {
                     <span className="text-blue-700 font-semibold text-lg">Credit Amount:</span>
                     <span className="font-bold text-xl text-blue-600">{formatCurrency(creditNote.creditAmount)}</span>
                   </div>
+                  <div className="flex items-center justify-between px-4 py-2 bg-blue-50 border border-blue-100 rounded-lg">
+                    <span className="text-sm font-medium text-blue-700">VAT Rate:</span>
+                    <span className="text-blue-900 font-semibold">{resolvedVatRate}%</span>
+                  </div>
+                  {Number.isFinite(Number(creditNote.vatAmount)) && (
+                    <div className="flex items-center justify-between px-4 py-2 bg-blue-50 border border-blue-100 rounded-lg">
+                      <span className="text-sm font-medium text-blue-700">VAT Amount:</span>
+                      <span className="text-blue-900 font-semibold">{formatCurrency(creditNote.vatAmount)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -266,6 +360,66 @@ const CreditNoteDetailsModal = ({ creditNote, isOpen, onClose, onUpdate }) => {
               </div>
             </div>
           </div>
+          {hasLineItems && (
+            <div className="mt-8 bg-white border border-blue-200 rounded-lg p-5 shadow-lg">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h3 className="text-lg font-semibold flex items-center text-blue-800">
+                  <div className="p-2 bg-blue-500/20 rounded-lg mr-3">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                  </div>
+                  Credited Items
+                </h3>
+                {creditNote.status !== 'cancelled' && (
+                  <span className="text-xs text-blue-500">
+                    Click "Edit Credit" to adjust these rows in the creation modal.
+                  </span>
+                )}
+              </div>
+              <div className="overflow-x-auto border border-blue-100 rounded-lg">
+                <table className="w-full text-sm text-blue-900">
+                  <thead className="bg-blue-50 text-xs uppercase tracking-wide">
+                    <tr>
+                      <th className="px-4 py-2 text-left">Type</th>
+                      <th className="px-4 py-2 text-left">Item</th>
+                      <th className="px-4 py-2 text-center">Quantity</th>
+                      <th className="px-4 py-2 text-right">Unit Price</th>
+                      <th className="px-4 py-2 text-right">Line Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-blue-100">
+                    {resolvedLineItems.map((item, index) => {
+                      const lineTotal = calculateLineTotal(item);
+                      return (
+                        <tr key={`${item.itemId || index}-${index}`} className="bg-white">
+                          <td className="px-4 py-2 capitalize">{item.itemType}</td>
+                          <td className="px-4 py-2">
+                            <div className="font-medium text-blue-900">{item.name || 'Invoice Item'}</div>
+                            {item.description && (
+                              <div className="text-xs text-blue-500 mt-0.5">{item.description}</div>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-center">{item.creditedQuantity ?? item.quantity ?? 0}</td>
+                          <td className="px-4 py-2 text-right">{formatCurrency(item.unitPrice ?? item.price ?? 0)}</td>
+                          <td className="px-4 py-2 text-right">{formatCurrency(lineTotal)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-between items-center mt-4 text-sm text-blue-900">
+                <span className="font-medium">Total Credited:</span>
+                <span className="font-semibold">
+                  {formatCurrency(
+                    resolvedLineItems.reduce(
+                      (sum, item) => sum + calculateLineTotal(item),
+                      0
+                    )
+                  )}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -319,6 +473,56 @@ const CreditNoteDetailsModal = ({ creditNote, isOpen, onClose, onUpdate }) => {
                     </div>
                   ) : (
                     "Process Credit Note"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl border border-red-200 w-full max-w-md">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="p-3 bg-red-100 rounded-lg mr-4">
+                  <AlertCircle className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Delete Credit Note</h3>
+                  <p className="text-sm text-gray-600">This action cannot be undone</p>
+                </div>
+              </div>
+              <div className="mb-6">
+                <p className="text-gray-700">
+                  Are you sure you want to permanently delete credit note <strong>{creditNote.creditNoteNumber}</strong>?
+                </p>
+                <p className="text-sm text-red-600 mt-3">
+                  Any applied credit will be reversed and the linked invoices will regain their original balances.
+                </p>
+              </div>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleting}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                >
+                  Keep Credit Note
+                </button>
+                <button
+                  onClick={handleDeleteCreditNote}
+                  disabled={deleting}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+                >
+                  {deleting ? (
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Deleting...
+                    </div>
+                  ) : (
+                    "Delete Credit Note"
                   )}
                 </button>
               </div>

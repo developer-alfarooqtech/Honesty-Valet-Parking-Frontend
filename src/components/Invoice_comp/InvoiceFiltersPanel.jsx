@@ -28,6 +28,8 @@ const InvoiceFiltersPanel = ({
   setShowPendingOnly,
   showCancelledOnly,
   setShowCancelledOnly,
+  sortOrder,
+  setSortOrder,
   invoices,
   resetFilters,
   downloadPdf,
@@ -93,37 +95,37 @@ const InvoiceFiltersPanel = ({
 
       {/* Filter Content */}
       <div className="p-6">
-        {/* Main Search Row */}
+        {/* Search Input */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Search Invoices
           </label>
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
               <Search className="h-5 w-5 text-gray-400" />
             </div>
             <input
               type="text"
-              placeholder="Search by invoice"
-              className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-700 placeholder-gray-400 transition-all"
+              placeholder="Search by invoice number..."
+              className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-700 placeholder-gray-400 text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm("")}
-                className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-gray-600"
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             )}
           </div>
         </div>
 
         {/* Filter Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6">
           {/* Customer Filter */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-3">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Customer
             </label>
@@ -137,7 +139,7 @@ const InvoiceFiltersPanel = ({
           </div>
 
           {/* Date Range Filters */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Date Range
             </label>
@@ -171,27 +173,45 @@ const InvoiceFiltersPanel = ({
             </div>
           </div>
 
-          {/* Export Actions */}
-          <div className="lg:col-span-1">
+          {/* Sort Order */}
+          <div className="lg:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Export Data
+              Sort By
             </label>
-            <div className="flex flex-col gap-2">
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              className="w-full px-3 py-2.5 border border-gray-200 bg-gray-50 rounded-lg text-gray-700 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
+              title="Sort invoices by date"
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </div>
+
+          {/* Export Actions */}
+          <div className="lg:col-span-3">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Export
+            </label>
+            <div className="flex gap-2">
               <button
                 onClick={downloadPdf}
                 disabled={exportingPDF}
-                className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white px-3 py-2 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm font-medium"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 border border-purple-300 bg-white text-purple-600 px-3 py-2.5 rounded-lg hover:bg-purple-50 hover:border-purple-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                title="Export as PDF"
               >
-                <FileText size={14} />
-                {exportingPDF ? "Generating..." : "PDF"}
+                <FileText size={16} />
+                <span className="hidden sm:inline">{exportingPDF ? "..." : "PDF"}</span>
               </button>
               <button
                 onClick={handleDownloadExcel}
                 disabled={exportingExcel}
-                className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-green-500 text-white px-3 py-2 rounded-lg hover:from-blue-600 hover:to-green-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm font-medium"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 border border-green-300 bg-white text-green-600 px-3 py-2.5 rounded-lg hover:bg-green-50 hover:border-green-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                title="Export as Excel"
               >
-                <FileSpreadsheet size={14} />
-                {exportingExcel ? "Generating..." : "Excel"}
+                <FileSpreadsheet size={16} />
+                <span className="hidden sm:inline">{exportingExcel ? "..." : "Excel"}</span>
               </button>
             </div>
           </div>

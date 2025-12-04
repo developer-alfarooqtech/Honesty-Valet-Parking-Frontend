@@ -74,6 +74,7 @@ const Invoices = () => {
     selectedProducts,
     selectedServices,
     selectedCredits,
+    creationOrder,
     invoiceDate,
     discount,
     vatRate,
@@ -85,6 +86,7 @@ const Invoices = () => {
     selectedProductForBatch,
     pendingRowId,
     noteInputRefs,
+    inlineInsert,
     // Filter states
     startDate,
     setStartDate,
@@ -140,6 +142,11 @@ const Invoices = () => {
     handleEmptyRowSearch,
     handleEmptyRowItemSelect,
     handleRemoveEmptyRow,
+    handleAddLineBelow,
+    handleInlineInsertSearch,
+    handleInlineItemSelect,
+    handleInlineTypeChange,
+    handleCancelInlineInsert,
     handleBatchSelect,
     handleCreateInvoice,
   } = invoiceHandlers;
@@ -224,88 +231,6 @@ const Invoices = () => {
 
       {view === "list" ? (
         <>
-          {/* Search bar and Actions */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-            <div className="relative flex-1">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <Search className="h-5 w-5 text-blue-400" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search Invoice"
-                className="pl-10 w-full p-3 bg-white border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-700 placeholder-gray-400"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-              {/* Sort select - server-side */}
-              <div className="flex items-center ml-3">
-                <label className="mr-2 text-sm text-blue-600">Sort:</label>
-                <select
-                  value={sortOrder}
-                  onChange={(e) => setSortOrder(e.target.value)}
-                  className="px-3 py-2 border text-gray-700 border-blue-500 rounded-md"
-                  title="Sort invoices by date"
-                >
-                  <option value="newest">Newest first</option>
-                  <option value="oldest">Oldest first</option>
-                </select>
-              </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-2">
-              {/* dont use these buttons because we have a separate page for repayment */}
-              {/* <button
-                onClick={() => openRepaymentModal(true)}
-                disabled={selectedInvoices.length === 0}
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-all duration-300 ${
-                  selectedInvoices.length > 0
-                    ? "bg-green-500 text-white hover:bg-green-600 shadow-lg"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
-              >
-                <CheckSquare size={16} />
-                <span>Full Payment</span>
-              </button>
-
-              <button
-                onClick={() => openRepaymentModal(false)}
-                disabled={selectedInvoices.length === 0}
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-all duration-300 ${
-                  selectedInvoices.length > 0
-                    ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
-              >
-                <DollarSign size={16} />
-                <span>Partial Payment</span>
-              </button> */}
-
-              <button
-                onClick={async () => {
-                  setPrintingInvoices(true);
-                  try {
-                    await printMultipleInvoices(selectedInvoices, includeSeal, includeSignature);
-                  } catch (error) {
-                    console.error("Print error:", error);
-                  } finally {
-                    setPrintingInvoices(false);
-                  }
-                }}
-                disabled={selectedInvoices.length === 0 || printingInvoices}
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-all duration-300 ${
-                  selectedInvoices.length > 0 && !printingInvoices
-                    ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
-                title="Print selected invoices"
-              >
-                <Printer size={16} />
-                <span>{printingInvoices ? "Printing..." : "Print Invoices"}</span>
-              </button>
-            </div>
-          </div>
 
           {/* Filters Panel */}
           <InvoiceFiltersPanel
@@ -326,6 +251,8 @@ const Invoices = () => {
             setShowPendingOnly={setShowPendingOnly}
             showCancelledOnly={showCancelledOnly}
             setShowCancelledOnly={setShowCancelledOnly}
+            sortOrder={sortOrder}
+            setSortOrder={setSortOrder}
             invoices={invoices}
             resetFilters={resetFilters}
             downloadPdf={downloadPdf}
@@ -334,64 +261,59 @@ const Invoices = () => {
             exportingExcel={exportingExcel}
           />
 
-          {/* Selected Invoices Count and Print Button with Seal/Signature Options */}
+          {/* Print Options Panel - Only show when invoices are selected */}
           {selectedInvoices.length > 0 && (
-            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm">
-                    <span className="font-medium text-blue-700">
-                      {selectedInvoices.length}
-                    </span>{" "}
-                    <span className="text-blue-600">invoice(s) selected</span>
+            <div className="mb-6 p-5 bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-xl shadow-md">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                {/* Print Options */}
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 rounded-lg">
+                    <Printer size={16} className="text-blue-600" />
+                    <span className="text-sm font-semibold text-blue-700">Print Options:</span>
                   </div>
-                  
-                  <button
-                    onClick={async () => {
-                      setPrintingInvoices(true);
-                      try {
-                        await printMultipleInvoices(selectedInvoices, includeSeal, includeSignature);
-                      } catch (error) {
-                        console.error("Print error:", error);
-                      } finally {
-                        setPrintingInvoices(false);
-                      }
-                    }}
-                    disabled={printingInvoices}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
-                      !printingInvoices
-                        ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl"
-                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    }`}
-                    title="Print selected invoices"
-                  >
-                    <Printer size={18} />
-                    <span>{printingInvoices ? "Printing..." : "Print Selected Invoices"}</span>
-                  </button>
-                </div>
-
-                {/* Seal and Signature Checkboxes */}
-                <div className="flex items-center gap-6 pt-2 border-t border-blue-200">
-                  {/* <span className="text-sm font-medium text-blue-700">PDF Options:</span> */}
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 px-3 py-1.5 rounded-md transition-colors">
                     <input
                       type="checkbox"
                       checked={includeSeal}
                       onChange={(e) => setIncludeSeal(e.target.checked)}
                       className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     />
-                    <span className="text-sm text-gray-700">Company Seal</span>
+                    <span className="text-sm font-medium text-gray-700">Seal</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 px-3 py-1.5 rounded-md transition-colors">
                     <input
                       type="checkbox"
                       checked={includeSignature}
                       onChange={(e) => setIncludeSignature(e.target.checked)}
                       className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     />
-                    <span className="text-sm text-gray-700">Company Signature</span>
+                    <span className="text-sm font-medium text-gray-700">Signature</span>
                   </label>
                 </div>
+
+                {/* Print Button */}
+                <button
+                  onClick={async () => {
+                    setPrintingInvoices(true);
+                    try {
+                      await printMultipleInvoices(selectedInvoices, includeSeal, includeSignature);
+                    } catch (error) {
+                      console.error("Print error:", error);
+                    } finally {
+                      setPrintingInvoices(false);
+                    }
+                  }}
+                  disabled={printingInvoices}
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
+                    !printingInvoices
+                      ? "bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
+                  title="Print selected invoices"
+                >
+                  <Printer size={18} />
+                  <span>{printingInvoices ? "Printing..." : `Print ${selectedInvoices.length} Invoice${selectedInvoices.length > 1 ? 's' : ''}`}</span>
+                </button>
               </div>
             </div>
           )}
@@ -452,11 +374,17 @@ const Invoices = () => {
           selectedProducts={selectedProducts}
           selectedServices={selectedServices}
           selectedCredits={selectedCredits}
+          creationOrder={creationOrder}
+          inlineInsert={inlineInsert}
           emptyRows={emptyRows}
-          setEmptyRows={invoiceLogic.setEmptyRows}
           handleEmptyRowSearch={handleEmptyRowSearch}
           handleEmptyRowItemSelect={handleEmptyRowItemSelect}
           handleRemoveEmptyRow={handleRemoveEmptyRow}
+          handleAddLineBelow={handleAddLineBelow}
+          handleInlineInsertSearch={handleInlineInsertSearch}
+          handleInlineItemSelect={handleInlineItemSelect}
+          handleCancelInlineInsert={handleCancelInlineInsert}
+          handleInlineTypeChange={handleInlineTypeChange}
           handleProductNoteChange={handleProductNoteChange}
           handleServiceNoteChange={handleServiceNoteChange}
           handleProductQuantityChange={handleProductQuantityChange}
