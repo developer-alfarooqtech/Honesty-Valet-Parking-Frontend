@@ -1,9 +1,9 @@
-import { FileText, X, Edit3 } from 'lucide-react';
+import { FileText, X, Edit3, Copy } from 'lucide-react';
 import React, { useState } from 'react'
 import { cancelInvoice as cancelInvoiceAPI } from '../../service/invoicesService'
 import toast from 'react-hot-toast';
 
-const InvoicesList = ({invoices, selectedInvoices, handleInvoiceCheckboxChange, handleInvoiceSelect, onInvoiceUpdate, onEditInvoice}) => {
+const InvoicesList = ({invoices, selectedInvoices, handleInvoiceCheckboxChange, handleInvoiceSelect, onInvoiceUpdate, onEditInvoice, onDuplicateInvoice}) => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [invoiceToCancel, setInvoiceToCancel] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -194,7 +194,14 @@ const getDaysPastDue = (dateString) => {
               </td>
             </tr>
           ) : (
-            invoices.map((invoice) => (
+            invoices.map((invoice) => {
+              const isCancelled = invoice.isCancelled;
+              const isFullyPaid = invoice.isPaymentCleared;
+              const canEdit = !isFullyPaid && !isCancelled;
+              const editDisabled = isFullyPaid || isCancelled;
+              const cancelDisabled = isFullyPaid || isCancelled;
+
+              return (
               <tr key={invoice._id} className="hover:bg-gray-100 transition-colors duration-200">
                 <td className="px-3 py-4 whitespace-nowrap text-center">
                   <input
@@ -276,27 +283,56 @@ const getDaysPastDue = (dateString) => {
                       <FileText size={18} />
                     </button>
                     
-                    {!invoice.isPaymentCleared && !invoice.isCancelled && (
+                    {!isCancelled && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onEditInvoice(invoice);
+                          if (!editDisabled) {
+                            onEditInvoice(invoice);
+                          }
                         }}
-                        className="text-green-400 hover:text-green-300 transition-colors"
-                        title="Update Invoice"
+                        className={`transition-colors ${
+                          editDisabled
+                            ? "text-green-300 opacity-60 cursor-not-allowed"
+                            : "text-green-400 hover:text-green-300"
+                        }`}
+                        title={editDisabled ? "Cannot edit fully paid invoice" : "Update Invoice"}
+                        disabled={editDisabled}
                       >
                         <Edit3 size={18} />
                       </button>
                     )}
-                    
-                    {!invoice.isPaymentCleared && !invoice.isCancelled && (
+
+                    {!isCancelled && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleCancelClick(invoice);
+                          if (onDuplicateInvoice) {
+                            onDuplicateInvoice(invoice);
+                          }
                         }}
-                        className="text-red-400 hover:text-red-300 transition-colors"
-                        title="Cancel Invoice"
+                        className="text-purple-400 hover:text-purple-300 transition-colors"
+                        title="Duplicate Invoice"
+                      >
+                        <Copy size={18} />
+                      </button>
+                    )}
+                    
+                    {!isCancelled && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!cancelDisabled) {
+                            handleCancelClick(invoice);
+                          }
+                        }}
+                        className={`transition-colors ${
+                          cancelDisabled
+                            ? "text-red-300 opacity-60 cursor-not-allowed"
+                            : "text-red-400 hover:text-red-300"
+                        }`}
+                        title={cancelDisabled ? "Cannot cancel fully paid invoice" : "Cancel Invoice"}
+                        disabled={cancelDisabled}
                       >
                         <X size={18} />
                       </button>
@@ -304,7 +340,8 @@ const getDaysPastDue = (dateString) => {
                   </div>
                 </td>
               </tr>
-            ))
+              );
+            })
           )}
         </tbody>
       </table>

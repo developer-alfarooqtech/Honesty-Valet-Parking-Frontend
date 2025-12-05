@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useMemo } from "react";
-import { FileText, Briefcase, Package, Trash2, Plus, X } from "lucide-react";
+import { FileText, Briefcase, Package, Trash2, Plus, X, Copy } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import CustomerSelector from "../SalesOrder_comp/CustomerSelector";
 import InlineItemSelector from "./InlineItemSelector";
@@ -57,12 +57,23 @@ const InvoiceCreationForm = ({
   pendingRowId,
   setPendingRowId,
   handleBatchSelect,
+  isDuplicateMode,
+  duplicateSourceInvoice,
+  duplicateGuard,
+  exitDuplicateMode,
 }) => {
   // Refs for keyboard navigation
   const customerSectionRef = useRef(null);
   const productServiceSectionRef = useRef(null);
   const submitButtonRef = useRef(null);
   const dateInputRef = useRef(null);
+  const isDuplicateBlocked = Boolean(isDuplicateMode && duplicateGuard && !duplicateGuard.isReady);
+
+  const handleExitDuplicateMode = () => {
+    if (exitDuplicateMode) {
+      exitDuplicateMode();
+    }
+  };
 
   // Prefill LPO when editing
   useEffect(() => {
@@ -350,6 +361,12 @@ const InvoiceCreationForm = ({
     return renderInlineInsertRow();
   };
 
+  const lpoInputClasses = `w-full px-4 py-3 bg-gray-50 border rounded-lg text-gray-700 transition-all duration-200 focus:ring-2 ${
+    isDuplicateBlocked
+      ? 'border-red-300 bg-red-50 focus:ring-red-400 focus:border-red-400'
+      : 'border-gray-200 focus:ring-blue-500/50 focus:border-blue-500'
+  }`;
+
   return (
     <div 
       className="bg-white rounded-xl shadow-2xl border border-blue-200 p-8 animate-fade-in"
@@ -380,6 +397,38 @@ const InvoiceCreationForm = ({
           </div>
         </div>
       </div>
+
+      {isDuplicateMode && (
+        <div className="mb-6 p-4 border border-purple-200 bg-purple-50 rounded-lg flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-white/70 rounded-full border border-purple-200">
+              <Copy size={18} className="text-purple-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-purple-900">
+                Duplicating {duplicateSourceInvoice?.name || "invoice"}
+              </p>
+              <p className={`text-xs mt-1 ${isDuplicateBlocked ? 'text-red-600' : 'text-green-600'}`}>
+                {isDuplicateBlocked
+                  ? `Update ${duplicateGuard?.missingFields?.join(" & ") || "the required fields"} before saving.`
+                  : "All duplicate checks passed. You can save this invoice."}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={`text-xs font-semibold ${isDuplicateBlocked ? 'text-red-600' : 'text-green-600'}`}>
+              {isDuplicateBlocked ? "Action required" : "Ready to save"}
+            </span>
+            <button
+              type="button"
+              onClick={handleExitDuplicateMode}
+              className="px-4 py-2 text-xs font-semibold text-purple-600 border border-purple-300 rounded-md hover:bg-purple-100 transition-colors"
+            >
+              Exit duplicate mode
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Customer Selection Section */}
       <div className="mb-8" ref={customerSectionRef} tabIndex={-1}>
@@ -425,10 +474,15 @@ const InvoiceCreationForm = ({
               type="text"
               value={lpo || ""}
               onChange={(e) => setLpo(e.target.value)}
-              className={`w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-700 transition-all duration-200 ${isEditMode ? '' : ''}`}
+              className={lpoInputClasses}
               placeholder="Enter LPO number/reference"
               disabled={false}
             />
+            {isDuplicateMode && (
+              <p className={`mt-2 text-xs ${isDuplicateBlocked ? 'text-red-600' : 'text-green-600'}`}>
+                {isDuplicateBlocked ? "Provide a new LPO/reference for this copy." : "LPO updated for duplicate."}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -543,9 +597,9 @@ const InvoiceCreationForm = ({
                                   )}
                                 </div>
                                 <div className="flex-1">
-                                  <div className="text-sm text-gray-800 font-medium">
+                                  {/* <div className="text-sm text-gray-800 font-medium">
                                     {item.name || item.title}
-                                  </div>
+                                  </div> */}
                                   <div className="text-xs text-gray-500">
                                     {isCredit ? "Credit Item" : `Code: ${item.code}`}
                                   </div>
@@ -848,10 +902,18 @@ const InvoiceCreationForm = ({
         <button
           type="button"
           onClick={handleCreateInvoice}
-          disabled={loading || !selectedCustomerForInvoice || (selectedProducts.length === 0 && selectedServices.length === 0)}
+          disabled={
+            loading ||
+            !selectedCustomerForInvoice ||
+            (selectedProducts.length === 0 && selectedServices.length === 0) ||
+            isDuplicateBlocked
+          }
           ref={submitButtonRef}
           className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
-            loading || !selectedCustomerForInvoice || (selectedProducts.length === 0 && selectedServices.length === 0)
+            loading ||
+            !selectedCustomerForInvoice ||
+            (selectedProducts.length === 0 && selectedServices.length === 0) ||
+            isDuplicateBlocked
               ? "bg-gray-200 text-gray-500 cursor-not-allowed"
               : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg"
           }`}
@@ -863,7 +925,7 @@ const InvoiceCreationForm = ({
             </div>
           ) : (
             <>
-              {isEditMode ? "Update Invoice" : "Create Invoice"}
+              {isEditMode ? "Update Invoice" : isDuplicateMode ? "Save Duplicate" : "Create Invoice"}
             </>
           )}
         </button>

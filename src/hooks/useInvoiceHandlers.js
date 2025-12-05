@@ -32,6 +32,8 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     discount, setDiscount,
     editingInvoice, setEditingInvoice,
     isEditMode, setIsEditMode,
+    isDuplicateMode, setIsDuplicateMode,
+    duplicateSourceInvoice, setDuplicateSourceInvoice,
     itemType, setItemType,
     emptyRows, setEmptyRows,
     inlineInsert, setInlineInsert,
@@ -42,6 +44,7 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     selectedProductForBatch, setSelectedProductForBatch,
     pendingRowId, setPendingRowId,
     noteInputRefs,
+    duplicateGuard,
 
     // Functions
     getUniqueKey,
@@ -306,6 +309,103 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     await fetchStats();
   };
 
+  const populateInvoiceFormFromDetails = (detailedInvoice) => {
+    if (!detailedInvoice) {
+      return;
+    }
+
+    const updatedCreationOrder = [];
+
+    setSelectedCustomerForInvoice(detailedInvoice.customer || null);
+    setInvoiceDate(
+      detailedInvoice.date
+        ? new Date(detailedInvoice.date).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0]
+    );
+    setDiscount(detailedInvoice.discount || 0);
+    setVatRate(detailedInvoice.vatRate || 5);
+    setLpo(detailedInvoice.lpo || "");
+    setDescription(detailedInvoice.description || "");
+
+    if (detailedInvoice.products && detailedInvoice.products.length > 0) {
+      const formattedProducts = detailedInvoice.products.map((item) => {
+        const product = item.product || {};
+        const productKey = uuidv4();
+        updatedCreationOrder.push({ key: productKey, type: 'product' });
+
+        return {
+          _id: product._id,
+          _selectedKey: productKey,
+          name: product.name || "Unknown Product",
+          code: product.code || "",
+          sellingPrice: item.price || 0,
+          quantity: item.quantity || 0,
+          note: item.note || "",
+          additionalNote: item.additionalNote || "",
+          purchasePrice: item.purchasePrice || product.purchasePrice || 0,
+          selectedBatch: item.batchId
+            ? { _id: item.batchId }
+            : product.purchasePricebatch && product.purchasePricebatch.length > 0
+              ? {
+                  _id: product.purchasePricebatch[0]._id,
+                  purchasePrice: product.purchasePricebatch[0].purchasePrice,
+                  stock: product.purchasePricebatch[0].stock,
+                }
+              : null,
+        };
+      });
+
+      setSelectedProducts(formattedProducts);
+    } else {
+      setSelectedProducts([]);
+    }
+
+    if (detailedInvoice.services && detailedInvoice.services.length > 0) {
+      const formattedServices = detailedInvoice.services.map((item) => {
+        const service = item.service || {};
+        const serviceKey = uuidv4();
+        updatedCreationOrder.push({ key: serviceKey, type: 'service' });
+
+        return {
+          _id: service._id,
+          _selectedKey: serviceKey,
+          name: service.name || "",
+          code: service.code || "",
+          price: item.price || 0,
+          quantity: item.quantity || 0,
+          note: item.note || "",
+          additionalNote: item.additionalNote || "",
+        };
+      });
+
+      setSelectedServices(formattedServices);
+    } else {
+      setSelectedServices([]);
+    }
+
+    if (detailedInvoice.credits && detailedInvoice.credits.length > 0) {
+      const formattedCredits = detailedInvoice.credits.map((item) => {
+        const creditKey = item._id || uuidv4();
+        updatedCreationOrder.push({ key: creditKey, type: 'credit' });
+        return {
+          _id: item._id || creditKey,
+          _selectedKey: creditKey,
+          title: item.title || "Credit",
+          amount: item.amount || 0,
+          note: item.note || "",
+          additionalNote: item.additionalNote || "",
+        };
+      });
+
+      setSelectedCredits(formattedCredits);
+    } else {
+      setSelectedCredits([]);
+    }
+
+    setCreationOrder(updatedCreationOrder);
+    setError("");
+  };
+
   // Edit invoice handler
   const handleEditInvoice = async (invoice) => {
     try {
@@ -317,96 +417,11 @@ export const useInvoiceHandlers = (invoiceLogic) => {
       }
       
       const detailedInvoice = response.data.invoice;
-      const updatedCreationOrder = [];
       setEditingInvoice(detailedInvoice);
       setIsEditMode(true);
-
-      setSelectedCustomerForInvoice(detailedInvoice.customer);
-      setInvoiceDate(
-        detailedInvoice.date
-          ? new Date(detailedInvoice.date).toISOString().split("T")[0]
-          : new Date().toISOString().split("T")[0]
-      );
-      setDiscount(detailedInvoice.discount || 0);
-      setVatRate(detailedInvoice.vatRate || 5);
-
-      if (detailedInvoice.products && detailedInvoice.products.length > 0) {
-        const formattedProducts = detailedInvoice.products.map((item, index) => {
-          const product = item.product || {};
-          const productKey = uuidv4();
-          updatedCreationOrder.push({ key: productKey, type: 'product' });
-          
-          return {
-            _id: product._id,
-            _selectedKey: productKey,
-            name: product.name || "Unknown Product",
-            code: product.code || "",
-            sellingPrice: item.price || 0,
-            quantity: item.quantity || 0,
-            note: item.note || "",
-            additionalNote: item.additionalNote || "",
-            purchasePrice: item.purchasePrice || product.purchasePrice || 0,
-            selectedBatch: item.batchId 
-              ? { _id: item.batchId }
-              : (product.purchasePricebatch && product.purchasePricebatch.length > 0)
-                ? {
-                    _id: product.purchasePricebatch[0]._id,
-                    purchasePrice: product.purchasePricebatch[0].purchasePrice,
-                    stock: product.purchasePricebatch[0].stock
-                  }
-                : null
-          };
-        });
-        
-        setSelectedProducts(formattedProducts);
-      } else {
-        setSelectedProducts([]);
-      }
-      
-      if (detailedInvoice.services && detailedInvoice.services.length > 0) {
-        const formattedServices = detailedInvoice.services.map((item, index) => {
-          const service = item.service || {};
-          const serviceKey = uuidv4();
-          updatedCreationOrder.push({ key: serviceKey, type: 'service' });
-          
-          return {
-            _id: service._id,
-            _selectedKey: serviceKey,
-            name: service.name || "",
-            code: service.code || "",
-            price: item.price || 0,
-            quantity: item.quantity || 0,
-            note: item.note || "",
-            additionalNote: item.additionalNote || "",
-          };
-        });
-        
-        setSelectedServices(formattedServices);
-      } else {
-        setSelectedServices([]);
-      }
-
-      // Add missing credits loading logic
-      if (detailedInvoice.credits && detailedInvoice.credits.length > 0) {
-        const formattedCredits = detailedInvoice.credits.map((item) => {
-          const creditKey = item._id || uuidv4();
-          updatedCreationOrder.push({ key: creditKey, type: 'credit' });
-          return {
-            _id: item._id || creditKey,
-            _selectedKey: creditKey,
-            title: item.title || "Credit",
-            amount: item.amount || 0,
-            note: item.note || "",
-            additionalNote: item.additionalNote || "",
-          };
-        });
-        
-        setSelectedCredits(formattedCredits);
-      } else {
-        setSelectedCredits([]);
-      }
-
-      setCreationOrder(updatedCreationOrder);
+      setIsDuplicateMode(false);
+      setDuplicateSourceInvoice(null);
+      populateInvoiceFormFromDetails(detailedInvoice);
 
       setView("create");
     } catch (error) {
@@ -415,6 +430,42 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDuplicateInvoice = async (invoice) => {
+    try {
+      setLoading(true);
+      const response = await fetchInvDetails(invoice._id);
+
+      if (!response.data || !response.data.success) {
+        throw new Error("Failed to fetch invoice details");
+      }
+
+      const detailedInvoice = response.data.invoice;
+      populateInvoiceFormFromDetails(detailedInvoice);
+      setIsEditMode(false);
+      setEditingInvoice(null);
+      setIsDuplicateMode(true);
+      setLpo("");
+      setDuplicateSourceInvoice({
+        _id: detailedInvoice._id,
+        name: detailedInvoice.name,
+        lpo: detailedInvoice.lpo || "",
+      });
+
+      setView("create");
+      toast.success(`Duplicating ${detailedInvoice.name || 'invoice'}`);
+    } catch (error) {
+      console.error("Error preparing duplicate invoice:", error);
+      toast.error("Unable to duplicate invoice: " + (error.message || "Unknown error"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exitDuplicateMode = () => {
+    setIsDuplicateMode(false);
+    setDuplicateSourceInvoice(null);
   };
 
   // Product handlers
@@ -795,6 +846,14 @@ export const useInvoiceHandlers = (invoiceLogic) => {
   const handleCreateInvoice = async () => {
     const trimmedDescription = description.trim();
 
+    if (isDuplicateMode && duplicateGuard && !duplicateGuard.isReady) {
+      const missingSummary = duplicateGuard.missingFields.join(" & ");
+      const message = `Please update ${missingSummary} before saving the duplicate`;
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
     if (!selectedCustomerForInvoice) {
       setError("Please select a customer");
       toast.error("Please select a customer");
@@ -907,6 +966,8 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     setDiscount(0);
     setEditingInvoice(null);
     setIsEditMode(false);
+    setIsDuplicateMode(false);
+    setDuplicateSourceInvoice(null);
     setItemType('service');
     setEmptyRows([createEmptyRow()]);
     setCreationOrder([]);
@@ -927,6 +988,7 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     closeInvoiceDetails,
     handleInvoiceCheckboxChange,
     handleEditInvoice,
+    handleDuplicateInvoice,
     
     // Payment handlers
     openRepaymentModal,
@@ -973,6 +1035,7 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     handleCancelInlineInsert,
     handleBatchSelect,
     handleCreateInvoice,
+    exitDuplicateMode,
     resetInvoiceForm,
   };
 };

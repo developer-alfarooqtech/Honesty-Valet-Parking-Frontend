@@ -76,12 +76,17 @@ const Invoices = () => {
     selectedCredits,
     creationOrder,
     invoiceDate,
+    lpo,
+    setLpo,
     discount,
     vatRate,
     emptyRows,
     itemType,
     isEditMode,
     editingInvoice,
+    isDuplicateMode,
+    duplicateSourceInvoice,
+    duplicateGuard,
     batchModalOpen,
     selectedProductForBatch,
     pendingRowId,
@@ -124,6 +129,7 @@ const Invoices = () => {
     closeUpdateExpDateModal,
     resetFilters,
     handleEditInvoice,
+    handleDuplicateInvoice,
     resetInvoiceForm,
     // Creation form handlers
     handleCustomerSelectForInvoice,
@@ -149,6 +155,7 @@ const Invoices = () => {
     handleCancelInlineInsert,
     handleBatchSelect,
     handleCreateInvoice,
+    exitDuplicateMode,
   } = invoiceHandlers;
 
   // Note handling functions
@@ -342,6 +349,7 @@ const Invoices = () => {
                   invoiceLogic.fetchStats();
                 }}
                 onEditInvoice={handleEditInvoice}
+                onDuplicateInvoice={handleDuplicateInvoice}
               />
 
               {/* Pagination */}
@@ -367,8 +375,8 @@ const Invoices = () => {
           handleCustomerSelectForInvoice={handleCustomerSelectForInvoice}
           invoiceDate={invoiceDate}
           setInvoiceDate={invoiceLogic.setInvoiceDate}
-          lpo={invoiceLogic.lpo}
-          setLpo={invoiceLogic.setLpo}
+          lpo={lpo}
+          setLpo={setLpo}
           itemType={itemType}
           setItemType={invoiceLogic.setItemType}
           selectedProducts={selectedProducts}
@@ -412,6 +420,10 @@ const Invoices = () => {
           pendingRowId={pendingRowId}
           setPendingRowId={invoiceLogic.setPendingRowId}
           handleBatchSelect={handleBatchSelect}
+          isDuplicateMode={isDuplicateMode}
+          duplicateSourceInvoice={duplicateSourceInvoice}
+          duplicateGuard={duplicateGuard}
+          exitDuplicateMode={exitDuplicateMode}
         />
       )}
 

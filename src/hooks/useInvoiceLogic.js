@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { v4 as uuidv4 } from "uuid";
 import toast from "react-hot-toast";
 import {
@@ -77,6 +77,8 @@ export const useInvoiceLogic = () => {
   // Edit states
   const [editingInvoice, setEditingInvoice] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isDuplicateMode, setIsDuplicateMode] = useState(false);
+  const [duplicateSourceInvoice, setDuplicateSourceInvoice] = useState(null);
 
   // Form states
   const [itemType, setItemType] = useState('service');
@@ -97,6 +99,27 @@ export const useInvoiceLogic = () => {
   const noteInputRefs = useRef({});
 
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+  const duplicateGuard = useMemo(() => {
+    if (!isDuplicateMode || !duplicateSourceInvoice) {
+      return { isReady: true, missingFields: [] };
+    }
+
+    const missingFields = [];
+    const normalizedLpo = (lpo || "").trim();
+    const originalLpo = (duplicateSourceInvoice.lpo || "").trim();
+
+    if (!normalizedLpo) {
+      missingFields.push("LPO / Reference");
+    } else if (normalizedLpo === originalLpo) {
+      missingFields.push("New LPO / Reference");
+    }
+
+    return {
+      isReady: missingFields.length === 0,
+      missingFields,
+    };
+  }, [isDuplicateMode, duplicateSourceInvoice, lpo]);
 
   // Utility functions
   const isExpired = (dateString) => {
@@ -523,6 +546,8 @@ export const useInvoiceLogic = () => {
     statsLoading, setStatsLoading,
     editingInvoice, setEditingInvoice,
     isEditMode, setIsEditMode,
+    isDuplicateMode, setIsDuplicateMode,
+    duplicateSourceInvoice, setDuplicateSourceInvoice,
     itemType, setItemType,
     emptyRows, setEmptyRows,
     inlineInsert, setInlineInsert,
@@ -547,5 +572,6 @@ export const useInvoiceLogic = () => {
     loadBanks,
     handleDownloadExcel,
     downloadPdf,
+    duplicateGuard,
   };
 };

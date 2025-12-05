@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { Search, Calendar, X, DollarSign, XCircle } from "lucide-react";
+import { Search, X, DollarSign } from "lucide-react";
 import useDebounce from "../hooks/useDebounce";
 import Pagination from "../components/Pagination";
 import CustomerSearch from "../components/PendingPayments_comp/CustomerSearch";
 import PaymentModal from "../components/PendingPayments_comp/PaymentModal";
-import { getPendingPayments } from "../service/pendingPaymentsService";
+import {
+  getPendingPayments,
+  addCustomerBalance,
+} from "../service/pendingPaymentsService";
 import toast from "react-hot-toast";
 import {
   SortButton,
   TableHeaders,
 } from "../components/PendingPayments_comp/TableHead";
-import DatePicker from "react-datepicker";
 
 const PendingPayments = () => {
   const [invoices, setInvoices] = useState([]);
@@ -49,12 +51,11 @@ const PendingPayments = () => {
   const [selectedInvoices, setSelectedInvoices] = useState({});
   const [paymentData, setPaymentData] = useState({});
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [enteredTotalAmount, setEnteredTotalAmount] = useState("");
-  const [showDeclineModal, setShowDeclineModal] = useState(false);
-  const [hasManualReceivedAmount, setHasManualReceivedAmount] = useState(false);
 
   // Select all functionality
   const [selectAll, setSelectAll] = useState(false);
+  const [balanceTopUp, setBalanceTopUp] = useState("");
+  const [addingBalance, setAddingBalance] = useState(false);
 
   // Fetch invoices
   const fetchInvoices = async (page = 1) => {
@@ -130,6 +131,7 @@ const PendingPayments = () => {
       customer,
       customerSearch: customer ? customer.name : "",
     }));
+    setBalanceTopUp("");
   };
 
   // Clear customer filter
@@ -139,6 +141,7 @@ const PendingPayments = () => {
       customer: null,
       customerSearch: "",
     }));
+    setBalanceTopUp("");
   };
 
   // Handle date filter changes
@@ -310,39 +313,65 @@ const PendingPayments = () => {
     }, 0);
   };
 
-  useEffect(() => {
-    if (hasManualReceivedAmount) {
-      return;
-    }
-    const total = normalizeCurrency(calculateTotalPaymentAmount());
-    if (total > 0) {
-      setEnteredTotalAmount(total.toFixed(2));
-    } else {
-      setEnteredTotalAmount("");
-    }
-  }, [paymentData, hasManualReceivedAmount]);
-
-  useEffect(() => {
-    if (Object.keys(selectedInvoices).length === 0) {
-      setHasManualReceivedAmount(false);
-      setEnteredTotalAmount("");
-    }
-  }, [selectedInvoices]);
-
   // Handle payment submission
   const handlePaymentSubmit = () => {
-    const totalPaymentAmount = normalizeCurrency(calculateTotalPaymentAmount());
-    const enteredAmount = normalizeCurrency(enteredTotalAmount);
+    setShowPaymentModal(true);
+  };
 
-    const amountsMatch = Math.abs(enteredAmount - totalPaymentAmount) < 0.01;
-
-    if (!amountsMatch) {
-      setShowDeclineModal(true);
+  const handleAddBalance = async () => {
+    if (!filters.customer?._id) {
+      toast.error("Select a customer before adding balance");
       return;
     }
 
-    // If amounts match, proceed to payment modal
-    setShowPaymentModal(true);
+    const normalizedAmount = normalizeCurrency(balanceTopUp);
+    if (!normalizedAmount || normalizedAmount <= 0) {
+      toast.error("Enter a valid amount to add");
+      return;
+    }
+
+    setAddingBalance(true);
+    try {
+      const response = await addCustomerBalance(filters.customer._id, {
+        amount: normalizedAmount,
+      });
+      const data = await response.data;
+
+      if (data.success && data.customer) {
+        toast.success(data.message || "Balance updated successfully");
+        setFilters((prev) => ({
+          ...prev,
+          customer: data.customer,
+          customerSearch: data.customer.name || prev.customerSearch,
+        }));
+        setBalanceTopUp("");
+      } else {
+        toast.error(data.message || "Unable to update balance");
+      }
+    } catch (error) {
+      console.error("Error adding customer balance:", error);
+      toast.error(error?.response?.data?.message || "Failed to update balance");
+    } finally {
+      setAddingBalance(false);
+    }
+  };
+
+  const handlePaymentSuccess = (updatedCustomer) => {
+    setShowPaymentModal(false);
+    setSelectedInvoices({});
+    setPaymentData({});
+    setSelectAll(false);
+    setBalanceTopUp("");
+
+    if (updatedCustomer) {
+      setFilters((prev) => ({
+        ...prev,
+        customer: updatedCustomer,
+        customerSearch: updatedCustomer.name || prev.customerSearch,
+      }));
+    }
+
+    fetchInvoices(currentPage);
   };
 
   // Calculate totals for selected invoices with valid payment data
@@ -352,6 +381,10 @@ const PendingPayments = () => {
       paymentData: paymentData[invoiceId],
     }));
   };
+
+  const selectedCustomerBalance = filters.customer
+    ? normalizeCurrency(filters.customer.balance || 0)
+    : 0;
 
   return (
     <div className="p-6 space-y-6">
@@ -464,32 +497,60 @@ const PendingPayments = () => {
         </div>
       </div>
 
+      {filters.customer && (
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-green-200 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-700">
+              Customer Balance — {filters.customer.name}
+            </p>
+            <p className="text-2xl font-bold text-green-600">
+              AED {selectedCustomerBalance.toFixed(2)}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Use the payment modal to deduct from this balance or capture any excess as a top-up.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Add Balance (AED)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={balanceTopUp}
+                onChange={(e) => setBalanceTopUp(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="0.00"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleAddBalance}
+              disabled={addingBalance}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-60"
+            >
+              {addingBalance ? "Updating..." : "Add Balance"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Payment Actions */}
       {Object.keys(selectedInvoices).length > 0 && (
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <div className="flex justify-between items-center">
-            <div className="text-sm text-blue-800 flex flex-col md:flex-row md:items-center md:gap-4">
-              <span>
-                {Object.keys(selectedInvoices).length} invoice(s) selected
-              </span>
-              <span className="font-semibold">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="text-sm text-blue-800 space-y-1">
+              <p>{Object.keys(selectedInvoices).length} invoice(s) selected</p>
+              <p className="font-semibold">
                 Total Payment: AED {calculateTotalPaymentAmount().toFixed(2)}
-              </span>
-              <div className="flex items-center gap-2">
-                <label className="text-gray-700">Received Amount:</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={enteredTotalAmount}
-                  onChange={(e) => {
-                    setEnteredTotalAmount(e.target.value);
-                    setHasManualReceivedAmount(true);
-                  }}
-                  className="w-28 p-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="0.00"
-                />
-              </div>
+              </p>
+              {filters.customer && (
+                <p className="text-xs text-blue-600">
+                  Current balance: AED {selectedCustomerBalance.toFixed(2)} • Received amount & deductions are configured inside the payment modal.
+                </p>
+              )}
             </div>
             <button
               onClick={handlePaymentSubmit}
@@ -691,44 +752,10 @@ const PendingPayments = () => {
       {showPaymentModal && (
         <PaymentModal
           payments={getValidPayments()}
-          onClose={() => {
-            setShowPaymentModal(false);
-            setEnteredTotalAmount("");
-            setHasManualReceivedAmount(false);
-          }}
-          onSuccess={() => {
-            setShowPaymentModal(false);
-            setSelectedInvoices({});
-            setPaymentData({});
-            setEnteredTotalAmount("");
-            setHasManualReceivedAmount(false);
-            setSelectAll(false);
-            fetchInvoices(currentPage);
-          }}
+          customer={filters.customer}
+          onClose={() => setShowPaymentModal(false)}
+          onSuccess={handlePaymentSuccess}
         />
-      )}
-
-      {/* Mismatch Modal */}
-      {showDeclineModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full overflow-hidden">
-            <div className="p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-blue-600">Amount Mismatch</h3>
-            </div>
-            <div className="p-4 space-y-2 text-sm text-gray-700">
-              <p>The received amount does not match the total payment amount.</p>
-              <p>Please ensure both amounts are the same before processing.</p>
-            </div>
-            <div className="p-4 border-t border-gray-200 flex justify-end gap-2 bg-gray-50">
-              <button
-                onClick={() => setShowDeclineModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
