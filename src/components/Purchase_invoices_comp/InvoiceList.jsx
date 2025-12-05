@@ -26,7 +26,7 @@ const InvoiceList = ({
   }
 
   const handleConvertClick = (e, invoice) => {
-    e.stopPropagation(); // Prevent row click
+    e.stopPropagation(); // Prevent row
     onConvertToInvoice(invoice);
   };
 
