@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -29,6 +30,24 @@ import PendingPayments from "./pages/PendingPayments";
 import CreditNotes from "./pages/CreditNotes";
 
 function App() {
+// Global effect to prevent mouse wheel from changing number input values
+  useEffect(() => {
+    const handleWheel = (e) => {
+      // Check if the target is a number input and it's focused
+      if (e.target.type === "number" && document.activeElement === e.target) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    // Add event listener to document for wheel events
+    document.addEventListener("wheel", handleWheel, { passive: false });
+
+    // Cleanup function
+    return () => {
+      document.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
   return (
     <Provider store={store}>
       <Router>
