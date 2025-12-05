@@ -1,7 +1,6 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import { FileText, Briefcase, Package, Trash2, Plus, X } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
-import toast from "react-hot-toast";
 import CustomerSelector from "../SalesOrder_comp/CustomerSelector";
 import InlineItemSelector from "./InlineItemSelector";
 import BatchSelectionModal from "../SalesOrder_comp/BatchSelectionModal";
@@ -20,11 +19,17 @@ const InvoiceCreationForm = ({
   selectedProducts,
   selectedServices,
   selectedCredits,
+  creationOrder,
+  inlineInsert,
   emptyRows,
-  setEmptyRows,
   handleEmptyRowSearch,
   handleEmptyRowItemSelect,
   handleRemoveEmptyRow,
+  handleAddLineBelow,
+  handleInlineInsertSearch,
+  handleInlineItemSelect,
+  handleCancelInlineInsert,
+  handleInlineTypeChange,
   handleProductNoteChange,
   handleServiceNoteChange,
   handleProductQuantityChange,
@@ -102,6 +107,248 @@ const InvoiceCreationForm = ({
       dateInputRef.current?.focus();
     }, 100);
   }, []);
+
+  const getItemKey = (item = {}) => item._selectedKey || item.uniqueId || item._id;
+
+  const orderedItems = useMemo(() => {
+    const lookup = new Map();
+    selectedProducts.forEach((product) => {
+      lookup.set(getItemKey(product), { item: product, type: "product" });
+    });
+    selectedServices.forEach((service) => {
+      lookup.set(getItemKey(service), { item: service, type: "service" });
+    });
+    selectedCredits.forEach((credit) => {
+      lookup.set(getItemKey(credit), { item: credit, type: "credit" });
+    });
+
+    const seen = new Set();
+    const ordered = [];
+
+    creationOrder.forEach((entry) => {
+      const record = lookup.get(entry.key);
+      if (record) {
+        seen.add(entry.key);
+        ordered.push({ key: entry.key, type: entry.type || record.type, item: record.item });
+      }
+    });
+
+    const appendMissing = (collection, type) => {
+      collection.forEach((entry) => {
+        const key = getItemKey(entry);
+        if (!seen.has(key)) {
+          seen.add(key);
+          ordered.push({ key, type, item: entry });
+        }
+      });
+    };
+
+    appendMissing(selectedProducts, "product");
+    appendMissing(selectedServices, "service");
+    appendMissing(selectedCredits, "credit");
+
+    return ordered;
+  }, [creationOrder, selectedProducts, selectedServices, selectedCredits]);
+
+  const inlineInsertPosition = useMemo(() => {
+    if (!inlineInsert) {
+      return null;
+    }
+    const desiredIndex =
+      typeof inlineInsert.index === "number" ? inlineInsert.index : orderedItems.length;
+    return Math.min(Math.max(desiredIndex, 0), orderedItems.length);
+  }, [inlineInsert, orderedItems]);
+
+  const inlineInsertMeta = inlineInsert && inlineInsertPosition !== null
+    ? { ...inlineInsert, index: inlineInsertPosition }
+    : null;
+
+  const defaultRowCount = emptyRows.length;
+
+  const renderEmptyRow = (row) => {
+    const canRemoveRow = defaultRowCount > 1;
+
+    return (
+      <tr
+        key={`empty-row-${row.id}`}
+        className="transition-colors duration-150 border-t-2 border-blue-200 hover:bg-gray-50"
+      >
+        <td className="px-4 py-4">
+          {itemType === "credit" ? (
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  const newCredit = {
+                    _id: `credit-${Date.now()}`,
+                    title: "Credit",
+                    amount: 0,
+                    note: "",
+                    additionalNote: "",
+                  };
+                  handleEmptyRowItemSelect(row.id, newCredit);
+                }}
+                className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm bg-red-50 hover:bg-red-100 focus:ring-2 focus:ring-red-500/50 focus:border-red-500 text-red-700 font-medium transition-colors"
+              >
+                + Add Credit
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col space-y-2">
+              <InlineItemSelector
+                value={row.searchTerm}
+                onChange={(value) => handleEmptyRowSearch(row.id, value)}
+                onItemSelect={(item) => handleEmptyRowItemSelect(row.id, item)}
+                isProduct={itemType === "product"}
+                itemType={itemType}
+                placeholder={`Search ${
+                  itemType === "product" ? "products" : "services"
+                }...`}
+              />
+            </div>
+          )}
+        </td>
+        <td className="px-4 py-4">
+          <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100"></div>
+        </td>
+        <td className="px-4 py-4 whitespace-nowrap">
+          <div className="w-20 px-3 py-2 border border-gray-200 rounded-lg bg-gray-100"></div>
+        </td>
+        <td className="px-4 py-4 whitespace-nowrap">
+          <div className="w-24 px-3 py-2 border border-gray-200 rounded-lg bg-gray-100"></div>
+        </td>
+        <td className="px-4 py-4 whitespace-nowrap">
+          <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100"></div>
+        </td>
+        <td className="px-4 py-4 whitespace-nowrap text-center">
+          {canRemoveRow && (
+            <button
+              onClick={() => handleRemoveEmptyRow(row.id)}
+              className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-gray-500 hover:bg-gray-50 hover:border-gray-400 transition-colors duration-150"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </td>
+      </tr>
+    );
+  };
+
+  const renderInlineInsertRow = () => {
+    if (!inlineInsertMeta) {
+      return null;
+    }
+
+    const inlineType = inlineInsertMeta.type || itemType;
+    const typeLabel =
+      inlineType === "product"
+        ? "Product"
+        : inlineType === "service"
+        ? "Service"
+        : "Credit";
+    const isCreditType = inlineType === "credit";
+
+    const addInlineCredit = () => {
+      handleInlineItemSelect({
+        _id: `inline-credit-${Date.now()}`,
+        title: "Credit",
+        amount: 0,
+        note: "",
+        additionalNote: "",
+      });
+    };
+
+    const typeOptions = [
+      { value: "service", label: "Service", icon: <Briefcase size={14} /> },
+      { value: "product", label: "Product", icon: <Package size={14} /> },
+      { value: "credit", label: "Credit", icon: <Trash2 size={14} /> },
+    ];
+
+    return (
+      <tr
+        key={`inline-insert-${inlineInsertMeta.index}`}
+        className="bg-blue-50/70 border border-blue-200 animate-pulse"
+      >
+        <td className="px-4 py-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-blue-700">
+                Insert {typeLabel} below
+              </span>
+              <div className="flex items-center gap-2">
+                {typeOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleInlineTypeChange(option.value)}
+                    className={`flex items-center gap-1 px-2 py-1 text-xs rounded-md border transition-colors ${
+                      inlineType === option.value
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-blue-600 border-blue-200 hover:bg-blue-50"
+                    }`}
+                  >
+                    {option.icon}
+                    {option.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={handleCancelInlineInsert}
+                  className="p-2 text-blue-500 hover:text-blue-700"
+                  title="Cancel inline insert"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+            {isCreditType ? (
+              <button
+                onClick={addInlineCredit}
+                className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm bg-red-50 hover:bg-red-100 focus:ring-2 focus:ring-red-500/50 focus:border-red-500 text-red-700 font-medium transition-colors"
+              >
+                + Add Credit
+              </button>
+            ) : (
+              <InlineItemSelector
+                value={inlineInsertMeta.searchTerm || ""}
+                onChange={handleInlineInsertSearch}
+                onItemSelect={handleInlineItemSelect}
+                isProduct={inlineType === "product"}
+                itemType={inlineType}
+                placeholder={`Search ${
+                  inlineType === "product" ? "products" : "services"
+                }...`}
+              />
+            )}
+            <p className="text-xs text-blue-500">
+              This temporary row disappears after selecting an item.
+            </p>
+          </div>
+        </td>
+        <td className="px-4 py-4">
+          <div className="w-full px-3 py-2 border border-blue-200 rounded-lg bg-blue-100"></div>
+        </td>
+        <td className="px-4 py-4 whitespace-nowrap">
+          <div className="w-20 px-3 py-2 border border-blue-200 rounded-lg bg-blue-100"></div>
+        </td>
+        <td className="px-4 py-4 whitespace-nowrap">
+          <div className="w-24 px-3 py-2 border border-blue-200 rounded-lg bg-blue-100"></div>
+        </td>
+        <td className="px-4 py-4 whitespace-nowrap">
+          <div className="w-full px-3 py-2 border border-blue-200 rounded-lg bg-blue-100"></div>
+        </td>
+        <td className="px-4 py-4 whitespace-nowrap text-center">
+          <span className="text-xs font-medium text-blue-500">Inline Insert</span>
+        </td>
+      </tr>
+    );
+  };
+
+  const renderInlineSlot = (position) => {
+    if (!inlineInsertMeta || inlineInsertMeta.index !== position) {
+      return null;
+    }
+    return renderInlineInsertRow();
+  };
 
   return (
     <div 
@@ -272,19 +519,16 @@ const InvoiceCreationForm = ({
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {/* Existing items */}
-                    {[...selectedProducts, ...selectedServices, ...selectedCredits]
-                      .filter(item => item.creationIndex === undefined)
-                      .map((item) => {
-                        const isProduct = "sellingPrice" in item;
-                        const isCredit = "title" in item && "amount" in item;
-                        const itemKey = item._selectedKey || item.uniqueId || item._id;
-                        
-                        return (
+                    {renderInlineSlot(0)}
+                    {orderedItems.map(({ key: itemKey, type: entryType, item }, index) => {
+                      const isProduct = entryType === "product";
+                      const isCredit = entryType === "credit";
+
+                      return (
+                        <React.Fragment key={`ordered-${itemKey}`}>
                           <tr
-                            key={itemKey}
                             className={`hover:bg-gray-50 transition-colors duration-150 ${
-                              isCredit ? 'bg-red-50 border-l-4 border-red-500' : ''
+                              isCredit ? "bg-red-50 border-l-4 border-red-500" : ""
                             }`}
                           >
                             <td className="px-4 py-4">
@@ -303,7 +547,7 @@ const InvoiceCreationForm = ({
                                     {item.name || item.title}
                                   </div>
                                   <div className="text-xs text-gray-500">
-                                    {isCredit ? 'Credit Item' : `Code: ${item.code}`}
+                                    {isCredit ? "Credit Item" : `Code: ${item.code}`}
                                   </div>
                                 </div>
                               </div>
@@ -315,34 +559,33 @@ const InvoiceCreationForm = ({
                                     <input
                                       type="text"
                                       value={item.note || ""}
-                                      onChange={(e) => handleCreditChange(itemKey, 'note', e.target.value)}
+                                      onChange={(e) => handleCreditChange(itemKey, "note", e.target.value)}
                                       placeholder="Note (optional)..."
                                       className="flex-1 px-3 py-2 border border-red-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-gray-50 text-gray-700 placeholder-gray-400"
                                     />
                                     {!item.showAdditionalNote && (
                                       <button
                                         type="button"
-                                        onClick={() => handleCreditChange(itemKey, 'showAdditionalNote', true)}
-                                        className="flex-shrink-0 p-2 text-red-600 rounded-lg transition-colors  text-xs"
+                                        onClick={() => handleCreditChange(itemKey, "showAdditionalNote", true)}
+                                        className="flex-shrink-0 p-2 text-red-600 rounded-lg transition-colors text-xs"
                                         title="Add desc"
                                       >
                                         add desc
                                       </button>
                                     )}
                                   </div>
-                                  {/* Additional Note Section - Only shows when toggled */}
                                   {item.showAdditionalNote && (
                                     <div className="flex items-center space-x-2">
                                       <input
                                         type="text"
                                         value={item.additionalNote || ""}
-                                        onChange={(e) => handleCreditChange(itemKey, 'additionalNote', e.target.value)}
+                                        onChange={(e) => handleCreditChange(itemKey, "additionalNote", e.target.value)}
                                         placeholder="Additional note (optional)..."
                                         className="flex-1 px-3 py-2 border border-red-200 rounded-lg text-xs focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-gray-50 text-gray-700 placeholder-gray-400"
                                       />
                                       <button
                                         type="button"
-                                        onClick={() => handleCreditChange(itemKey, 'showAdditionalNote', false)}
+                                        onClick={() => handleCreditChange(itemKey, "showAdditionalNote", false)}
                                         className="flex-shrink-0 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
                                         title="Hide additional note"
                                       >
@@ -373,239 +616,9 @@ const InvoiceCreationForm = ({
                                         type="button"
                                         onClick={() => {
                                           if (isProduct) {
-                                            handleProductNoteChange(itemKey, item.note, 'showAdditionalNote', true);
+                                            handleProductNoteChange(itemKey, item.note, "showAdditionalNote", true);
                                           } else {
-                                            handleServiceNoteChange(itemKey, item.note, 'showAdditionalNote', true);
-                                          }
-                                        }}
-                                        className="flex-shrink-0 p-2 text-blue-600 rounded-lg transition-colors  text-xs"
-                                        title="Add desc"
-                                      >
-                                        add desc
-                                      </button>
-                                    )}
-                                  </div>
-                                  {/* Additional Note Section - Only shows when toggled */}
-                                  {item.showAdditionalNote && (
-                                    <div className="flex items-center space-x-2">
-                                      <input
-                                        type="text"
-                                        value={item.additionalNote || ""}
-                                        onChange={(e) => {
-                                          if (isProduct) {
-                                            handleProductNoteChange(itemKey, item.note, 'additionalNote', e.target.value);
-                                          } else {
-                                            handleServiceNoteChange(itemKey, item.note, 'additionalNote', e.target.value);
-                                          }
-                                        }}
-                                        placeholder="Additional note (optional)..."
-                                        className="flex-1 px-3 py-2 border border-blue-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 text-gray-700 placeholder-gray-400"
-                                      />
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          if (isProduct) {
-                                            handleProductNoteChange(itemKey, item.note, 'showAdditionalNote', false);
-                                          } else {
-                                            handleServiceNoteChange(itemKey, item.note, 'showAdditionalNote', false);
-                                          }
-                                        }}
-                                        className="flex-shrink-0 p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200"
-                                        title="Hide additional note"
-                                      >
-                                        <X size={14} />
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap">
-                              {isCredit ? (
-                                <div className="w-20 px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-center text-gray-500">
-                                  N/A
-                                </div>
-                              ) : (
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max={
-                                    isProduct && item.selectedBatch
-                                      ? item.selectedBatch.stock
-                                      : 999
-                                  }
-                                  value={item.quantity}
-                                  onChange={(e) =>
-                                    isProduct
-                                      ? handleProductQuantityChange(itemKey, e.target.value)
-                                      : handleServiceQuantityChange(itemKey, e.target.value)
-                                  }
-                                  className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 text-gray-700"
-                                />
-                              )}
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap">
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={
-                                  isCredit 
-                                    ? item.amount 
-                                    : isProduct 
-                                    ? item.sellingPrice 
-                                    : item.price
-                                }
-                                onChange={(e) => {
-                                  if (isCredit) {
-                                    handleCreditChange(itemKey, 'amount', parseFloat(e.target.value) || 0);
-                                  } else if (isProduct) {
-                                    handleProductPriceChange(itemKey, e.target.value);
-                                  } else {
-                                    handleServicePriceChange(itemKey, e.target.value);
-                                  }
-                                }}
-                                className="w-24 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 text-gray-700"
-                              />
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap">
-                              <div className={`text-lg font-bold ${
-                                isCredit ? 'text-red-600' : 'text-gray-800'
-                              }`}>
-                                {isCredit ? '-' : ''}
-                                {(
-                                  isCredit 
-                                    ? item.amount || 0
-                                    : (isProduct ? item.sellingPrice : item.price) * item.quantity
-                                ).toFixed(2)}{" "}
-                                AED
-                              </div>
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-center">
-                              <button
-                                onClick={() => {
-                                  if (isProduct) {
-                                    handleRemoveProduct(itemKey);
-                                  } else if (isCredit) {
-                                    handleRemoveCredit(itemKey);
-                                  } else {
-                                    handleRemoveService(itemKey);
-                                  }
-                                }}
-                                className="inline-flex items-center p-2 border border-red-300 rounded-lg text-red-500 hover:bg-red-50 hover:border-red-400 transition-colors duration-150"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-
-                    {/* Recently added items */}
-                    {[...selectedProducts, ...selectedServices, ...selectedCredits]
-                      .filter(item => item.creationIndex !== undefined)
-                      .sort((a, b) => a.creationIndex - b.creationIndex)
-                      .map((item) => {
-                        const isProduct = "sellingPrice" in item;
-                        const isCredit = "title" in item && "amount" in item;
-                        const itemKey = item._selectedKey || item.uniqueId || item._id;
-                        
-                        return (
-                          <tr
-                            key={itemKey}
-                            className={`hover:bg-gray-50 transition-colors duration-150 bg-green-50 border border-green-200 ${
-                              isCredit ? 'border-l-4 border-l-red-500' : ''
-                            }`}
-                          >
-                            <td className="px-4 py-4">
-                              <div className="flex items-center space-x-3">
-                                <div className="flex-shrink-0">
-                                  {isProduct ? (
-                                    <Package size={16} className="text-blue-500" />
-                                  ) : isCredit ? (
-                                    <Trash2 size={16} className="text-red-500" />
-                                  ) : (
-                                    <Briefcase size={16} className="text-blue-600" />
-                                  )}
-                                </div>
-                                <div className="flex-1">
-                                  <div className="text-sm text-gray-800 font-medium">
-                                    {item.name || item.title}
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    {isCredit ? 'Credit Item' : `Code: ${item.code}`}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-4">
-                              {isCredit ? (
-                                <div className="space-y-2">
-                                  <div className="flex items-center space-x-2">
-                                    <input
-                                      type="text"
-                                      value={item.note || ""}
-                                      onChange={(e) => handleCreditChange(itemKey, 'note', e.target.value)}
-                                      placeholder="Note (optional)..."
-                                      className="flex-1 px-3 py-2 border border-red-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-gray-50 text-gray-700 placeholder-gray-400"
-                                    />
-                                    {!item.showAdditionalNote && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleCreditChange(itemKey, 'showAdditionalNote', true)}
-                                        className="flex-shrink-0 p-2 text-red-600 rounded-lg transition-colors text-xs"
-                                        title="Add desc"
-                                      >
-                                        add desc
-                                      </button>
-                                    )}
-                                  </div>
-                                  {/* Additional Note Section - Only shows when toggled */}
-                                  {item.showAdditionalNote && (
-                                    <div className="flex items-center space-x-2">
-                                      <input
-                                        type="text"
-                                        value={item.additionalNote || ""}
-                                        onChange={(e) => handleCreditChange(itemKey, 'additionalNote', e.target.value)}
-                                        placeholder="Additional note (optional)..."
-                                        className="flex-1 px-3 py-2 border border-red-200 rounded-lg text-xs focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-gray-50 text-gray-700 placeholder-gray-400"
-                                      />
-                                      <button
-                                        type="button"
-                                        onClick={() => handleCreditChange(itemKey, 'showAdditionalNote', false)}
-                                        className="flex-shrink-0 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
-                                        title="Hide additional note"
-                                      >
-                                        <X size={14} />
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="space-y-2">
-                                  <div className="flex items-center space-x-2">
-                                    <input
-                                      type="text"
-                                      value={item.note || ""}
-                                      onChange={(e) => {
-                                        if (isProduct) {
-                                          handleProductNoteChange(itemKey, e.target.value);
-                                        } else {
-                                          handleServiceNoteChange(itemKey, e.target.value);
-                                        }
-                                      }}
-                                      placeholder="Add note..."
-                                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 text-gray-700 placeholder-gray-400"
-                                      ref={(el) => (noteInputRefs.current[itemKey] = el)}
-                                    />
-                                    {!item.showAdditionalNote && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          if (isProduct) {
-                                            handleProductNoteChange(itemKey, item.note, 'showAdditionalNote', true);
-                                          } else {
-                                            handleServiceNoteChange(itemKey, item.note, 'showAdditionalNote', true);
+                                            handleServiceNoteChange(itemKey, item.note, "showAdditionalNote", true);
                                           }
                                         }}
                                         className="flex-shrink-0 p-2 text-blue-600 rounded-lg transition-colors text-xs"
@@ -615,7 +628,6 @@ const InvoiceCreationForm = ({
                                       </button>
                                     )}
                                   </div>
-                                  {/* Additional Note Section - Only shows when toggled */}
                                   {item.showAdditionalNote && (
                                     <div className="flex items-center space-x-2">
                                       <input
@@ -623,9 +635,9 @@ const InvoiceCreationForm = ({
                                         value={item.additionalNote || ""}
                                         onChange={(e) => {
                                           if (isProduct) {
-                                            handleProductNoteChange(itemKey, item.note, 'additionalNote', e.target.value);
+                                            handleProductNoteChange(itemKey, item.note, "additionalNote", e.target.value);
                                           } else {
-                                            handleServiceNoteChange(itemKey, item.note, 'additionalNote', e.target.value);
+                                            handleServiceNoteChange(itemKey, item.note, "additionalNote", e.target.value);
                                           }
                                         }}
                                         placeholder="Additional note (optional)..."
@@ -635,9 +647,9 @@ const InvoiceCreationForm = ({
                                         type="button"
                                         onClick={() => {
                                           if (isProduct) {
-                                            handleProductNoteChange(itemKey, item.note, 'showAdditionalNote', false);
+                                            handleProductNoteChange(itemKey, item.note, "showAdditionalNote", false);
                                           } else {
-                                            handleServiceNoteChange(itemKey, item.note, 'showAdditionalNote', false);
+                                            handleServiceNoteChange(itemKey, item.note, "showAdditionalNote", false);
                                           }
                                         }}
                                         className="flex-shrink-0 p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200"
@@ -680,15 +692,15 @@ const InvoiceCreationForm = ({
                                 min="0"
                                 step="0.01"
                                 value={
-                                  isCredit 
-                                    ? item.amount 
-                                    : isProduct 
-                                    ? item.sellingPrice 
+                                  isCredit
+                                    ? item.amount
+                                    : isProduct
+                                    ? item.sellingPrice
                                     : item.price
                                 }
                                 onChange={(e) => {
                                   if (isCredit) {
-                                    handleCreditChange(itemKey, 'amount', parseFloat(e.target.value) || 0);
+                                    handleCreditChange(itemKey, "amount", parseFloat(e.target.value) || 0);
                                   } else if (isProduct) {
                                     handleProductPriceChange(itemKey, e.target.value);
                                   } else {
@@ -700,11 +712,11 @@ const InvoiceCreationForm = ({
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap">
                               <div className={`text-lg font-bold ${
-                                isCredit ? 'text-red-600' : 'text-gray-800'
+                                isCredit ? "text-red-600" : "text-gray-800"
                               }`}>
-                                {isCredit ? '-' : ''}
+                                {isCredit ? "-" : ""}
                                 {(
-                                  isCredit 
+                                  isCredit
                                     ? item.amount || 0
                                     : (isProduct ? item.sellingPrice : item.price) * item.quantity
                                 ).toFixed(2)}{" "}
@@ -712,86 +724,44 @@ const InvoiceCreationForm = ({
                               </div>
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap text-center">
-                              <button
-                                onClick={() => {
-                                  if (isProduct) {
-                                    handleRemoveProduct(itemKey);
-                                  } else if (isCredit) {
-                                    handleRemoveCredit(itemKey);
-                                  } else {
-                                    handleRemoveService(itemKey);
-                                  }
-                                }}
-                                className="inline-flex items-center p-2 border border-red-300 rounded-lg text-red-500 hover:bg-red-50 hover:border-red-400 transition-colors duration-150"
-                              >
-                                <Trash2 size={16} />
-                              </button>
+                              <div className="flex items-center justify-center gap-2">
+                                {handleAddLineBelow && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAddLineBelow(itemKey)}
+                                    className="inline-flex items-center p-2 border border-blue-300 rounded-lg text-blue-600 hover:bg-blue-50 hover:border-blue-400 transition-colors duration-150"
+                                    title="Add line below"
+                                    aria-label="Add line below"
+                                  >
+                                    <Plus size={16} />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    if (isProduct) {
+                                      handleRemoveProduct(itemKey);
+                                    } else if (isCredit) {
+                                      handleRemoveCredit(itemKey);
+                                    } else {
+                                      handleRemoveService(itemKey);
+                                    }
+                                  }}
+                                  className="inline-flex items-center p-2 border border-red-300 rounded-lg text-red-500 hover:bg-red-50 hover:border-red-400 transition-colors duration-150"
+                                  title="Remove line"
+                                  aria-label="Remove line"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
-                        );
-                      })}
+                          {renderInlineSlot(index + 1)}
+                        </React.Fragment>
+                      );
+                    })}
 
                     {/* Empty Rows for Search */}
-                    {emptyRows.map((row) => (
-                      <tr
-                        key={row.id}
-                        className="hover:bg-gray-50 transition-colors duration-150 border-t-2 border-blue-200"
-                      >
-                        <td className="px-4 py-4">
-                          {itemType === 'credit' ? (
-                            <button
-                              onClick={() => {
-                                // Directly add a new credit without typing
-                                const newCredit = {
-                                  _id: `credit-${Date.now()}`,
-                                  title: 'Credit',
-                                  amount: 0,
-                                  note: '',
-                                  additionalNote: ''
-                                };
-                                handleEmptyRowItemSelect(row.id, newCredit);
-                              }}
-                              className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm bg-red-50 hover:bg-red-100 focus:ring-2 focus:ring-red-500/50 focus:border-red-500 text-red-700 font-medium transition-colors"
-                            >
-                              + Add Credit
-                            </button>
-                          ) : (
-                            <InlineItemSelector
-                              value={row.searchTerm}
-                              onChange={(value) => handleEmptyRowSearch(row.id, value)}
-                              onItemSelect={(item) => handleEmptyRowItemSelect(row.id, item)}
-                              isProduct={itemType === 'product'}
-                              itemType={itemType}
-                              placeholder={`Search ${
-                                itemType === 'product' ? "products" : "services"
-                              }...`}
-                            />
-                          )}
-                        </td>
-                        <td className="px-4 py-4">
-                          <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100"></div>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="w-20 px-3 py-2 border border-gray-200 rounded-lg bg-gray-100"></div>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="w-24 px-3 py-2 border border-gray-200 rounded-lg bg-gray-100"></div>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100"></div>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-center">
-                          {emptyRows.length > 1 && (
-                            <button
-                              onClick={() => handleRemoveEmptyRow(row.id)}
-                              className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-gray-500 hover:bg-gray-50 hover:border-gray-400 transition-colors duration-150"
-                            >
-                              <X size={16} />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {emptyRows.map((row) => renderEmptyRow(row))}
                   </tbody>
                 </table>
               </div>

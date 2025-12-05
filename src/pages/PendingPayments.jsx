@@ -51,12 +51,21 @@ const PendingPayments = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [enteredTotalAmount, setEnteredTotalAmount] = useState("");
   const [showDeclineModal, setShowDeclineModal] = useState(false);
+  const [hasManualReceivedAmount, setHasManualReceivedAmount] = useState(false);
 
   // Select all functionality
   const [selectAll, setSelectAll] = useState(false);
 
   // Fetch invoices
   const fetchInvoices = async (page = 1) => {
+    if (!filters.customer) {
+      setInvoices([]);
+      setTotalPages(1);
+      setTotalCount(0);
+      setCurrentPage(1);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const queryParams = new URLSearchParams({
@@ -88,6 +97,14 @@ const PendingPayments = () => {
   };
 
   useEffect(() => {
+    if (!filters.customer) {
+      setInvoices([]);
+      setTotalPages(1);
+      setTotalCount(0);
+      setCurrentPage(1);
+      return;
+    }
+
     fetchInvoices(1);
     setCurrentPage(1);
   }, [
@@ -100,6 +117,9 @@ const PendingPayments = () => {
 
   // Handle page change
   const handlePageChange = (page) => {
+    if (!filters.customer) {
+      return;
+    }
     fetchInvoices(page);
   };
 
@@ -276,19 +296,47 @@ const PendingPayments = () => {
   };
 
   // Calculate total payment amount from selected invoices
+  const normalizeCurrency = (value) => {
+    const numeric = typeof value === "string" ? parseFloat(value) : Number(value);
+    if (!Number.isFinite(numeric)) {
+      return 0;
+    }
+    return Number(numeric.toFixed(2));
+  };
+
   const calculateTotalPaymentAmount = () => {
     return Object.keys(paymentData).reduce((sum, invoiceId) => {
       return sum + (parseFloat(paymentData[invoiceId]?.amount) || 0);
     }, 0);
   };
 
+  useEffect(() => {
+    if (hasManualReceivedAmount) {
+      return;
+    }
+    const total = normalizeCurrency(calculateTotalPaymentAmount());
+    if (total > 0) {
+      setEnteredTotalAmount(total.toFixed(2));
+    } else {
+      setEnteredTotalAmount("");
+    }
+  }, [paymentData, hasManualReceivedAmount]);
+
+  useEffect(() => {
+    if (Object.keys(selectedInvoices).length === 0) {
+      setHasManualReceivedAmount(false);
+      setEnteredTotalAmount("");
+    }
+  }, [selectedInvoices]);
+
   // Handle payment submission
   const handlePaymentSubmit = () => {
-    const totalPaymentAmount = calculateTotalPaymentAmount();
-    const enteredAmount = parseFloat(enteredTotalAmount) || 0;
+    const totalPaymentAmount = normalizeCurrency(calculateTotalPaymentAmount());
+    const enteredAmount = normalizeCurrency(enteredTotalAmount);
 
-    // Validate that entered amount matches total payment amount
-    if (enteredAmount !== totalPaymentAmount) {
+    const amountsMatch = Math.abs(enteredAmount - totalPaymentAmount) < 0.01;
+
+    if (!amountsMatch) {
       setShowDeclineModal(true);
       return;
     }
@@ -434,7 +482,10 @@ const PendingPayments = () => {
                   step="0.01"
                   min="0"
                   value={enteredTotalAmount}
-                  onChange={(e) => setEnteredTotalAmount(e.target.value)}
+                  onChange={(e) => {
+                    setEnteredTotalAmount(e.target.value);
+                    setHasManualReceivedAmount(true);
+                  }}
                   className="w-28 p-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="0.00"
                 />
@@ -453,7 +504,11 @@ const PendingPayments = () => {
 
       {/* Invoices Table */}
       <div className="bg-white rounded-lg shadow-sm border border-blue-300 overflow-hidden">
-        {loading ? (
+        {!filters.customer ? (
+          <div className="p-8 text-center text-blue-600">
+            Select a customer to view pending invoices.
+          </div>
+        ) : loading ? (
           <div className="p-8 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
             <p className="mt-2 text-gray-500">Loading invoices...</p>
@@ -639,12 +694,14 @@ const PendingPayments = () => {
           onClose={() => {
             setShowPaymentModal(false);
             setEnteredTotalAmount("");
+            setHasManualReceivedAmount(false);
           }}
           onSuccess={() => {
             setShowPaymentModal(false);
             setSelectedInvoices({});
             setPaymentData({});
             setEnteredTotalAmount("");
+            setHasManualReceivedAmount(false);
             setSelectAll(false);
             fetchInvoices(currentPage);
           }}

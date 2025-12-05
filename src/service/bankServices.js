@@ -44,3 +44,25 @@ export const createBankAccount = async (bankData) => {
     throw error;
   }
 }
+
+export const updateBankTransaction = async (transactionId, payload) => {
+  try {
+    const response = await api.put(`/bank-statements/${transactionId}`, payload);
+    return response;
+  } catch (error) {
+    console.error("API Error:", error);
+    throw error;
+  }
+};
+
+export const reverseBankTransaction = async (transactionId, payload) => {
+  try {
+    const response = await api.delete(`/bank-statements/${transactionId}`, {
+      data: payload,
+    });
+    return response;
+  } catch (error) {
+    console.error("API Error:", error);
+    throw error;
+  }
+};

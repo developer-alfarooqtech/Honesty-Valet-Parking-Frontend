@@ -81,8 +81,9 @@ export const useInvoiceLogic = () => {
   // Form states
   const [itemType, setItemType] = useState('service');
   const [emptyRows, setEmptyRows] = useState([
-    { id: uuidv4(), searchTerm: "", type: 'service' },
+    { id: uuidv4(), searchTerm: "", type: null, insertAfterKey: null },
   ]);
+  const [inlineInsert, setInlineInsert] = useState(null);
   const [creationOrder, setCreationOrder] = useState([]);
 
   // Modal states
@@ -524,6 +525,7 @@ export const useInvoiceLogic = () => {
     isEditMode, setIsEditMode,
     itemType, setItemType,
     emptyRows, setEmptyRows,
+    inlineInsert, setInlineInsert,
     creationOrder, setCreationOrder,
     isUpdateExpDateModalOpen, setIsUpdateExpDateModalOpen,
     invoiceToUpdateExpDate, setInvoiceToUpdateExpDate,

@@ -36,7 +36,7 @@ export const downloadCreditNotes = async ({
 
 // Fetch credit note details by ID
 export const fetchCreditNoteDetails = async (creditNoteId) => {
-  return await api.get(`/credit-note-details/${creditNoteId}`);
+  return await api.get(`/credit-notes/${creditNoteId}`);
 };
 
 // Create invoice-based credit note

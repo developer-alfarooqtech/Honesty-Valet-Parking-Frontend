@@ -150,14 +150,14 @@ const ItemsList = ({ products = [], services = [], credits = [] }) => {
     ...products.map(product => ({
       ...product,
       type: 'product',
-      name: product.product?.name || 'Unknown Product',
+      name: product.product?.name || '',
       unitPrice: product.price,
       total: (product.price * product.quantity).toFixed(2),
     })),
     ...services.map(service => ({
       ...service,
       type: 'service',
-      name: service.service?.name || 'Unknown Service',
+      name: service.service?.name || '',
       unitPrice: service.price,
       total: (service.price * service.quantity).toFixed(2),
     })),

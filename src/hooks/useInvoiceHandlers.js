@@ -34,6 +34,7 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     isEditMode, setIsEditMode,
     itemType, setItemType,
     emptyRows, setEmptyRows,
+    inlineInsert, setInlineInsert,
     creationOrder, setCreationOrder,
     isUpdateExpDateModalOpen, setIsUpdateExpDateModalOpen,
     invoiceToUpdateExpDate, setInvoiceToUpdateExpDate,
@@ -48,6 +49,87 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     fetchStats,
     fetchInvoices,
   } = invoiceLogic;
+
+  const getItemKey = (item = {}) => item._selectedKey || item.uniqueId || item._id;
+
+  const addToCreationOrder = (key, type, insertIndex = null) => {
+    setCreationOrder((prev) => {
+      if (prev.some((entry) => entry.key === key)) {
+        return prev;
+      }
+
+      const entry = { key, type };
+
+      if (typeof insertIndex === "number" && insertIndex >= 0 && insertIndex <= prev.length) {
+        const updated = [...prev];
+        updated.splice(insertIndex, 0, entry);
+        return updated;
+      }
+
+      return [...prev, entry];
+    });
+  };
+
+  const removeFromCreationOrder = (key) => {
+    setCreationOrder((prev) => prev.filter((entry) => entry.key !== key));
+  };
+
+  const createEmptyRow = () => ({
+    id: uuidv4(),
+    searchTerm: "",
+    insertAfterKey: null,
+    type: null,
+  });
+
+  const getItemTypeByKey = (key) => {
+    if (!key) {
+      return null;
+    }
+
+    if (selectedProducts.some((product) => getItemKey(product) === key)) {
+      return 'product';
+    }
+    if (selectedServices.some((service) => getItemKey(service) === key)) {
+      return 'service';
+    }
+    if (selectedCredits.some((credit) => getItemKey(credit) === key)) {
+      return 'credit';
+    }
+    return null;
+  };
+
+  const getOrderedItemsByType = (type) => {
+    const source =
+      type === 'product'
+        ? selectedProducts
+        : type === 'service'
+        ? selectedServices
+        : selectedCredits;
+
+    const lookup = new Map();
+    source.forEach((item) => {
+      lookup.set(getItemKey(item), item);
+    });
+
+    const ordered = [];
+
+    creationOrder.forEach((entry) => {
+      if (entry.type !== type) {
+        return;
+      }
+      const match = lookup.get(entry.key);
+      if (match) {
+        ordered.push(match);
+        lookup.delete(entry.key);
+      }
+    });
+
+    lookup.forEach((item) => {
+      ordered.push(item);
+    });
+
+    return ordered;
+  };
 
   // Customer handlers
   const handleCustomerSelect = (customer) => {
@@ -235,6 +317,7 @@ export const useInvoiceHandlers = (invoiceLogic) => {
       }
       
       const detailedInvoice = response.data.invoice;
+      const updatedCreationOrder = [];
       setEditingInvoice(detailedInvoice);
       setIsEditMode(true);
 
@@ -250,10 +333,12 @@ export const useInvoiceHandlers = (invoiceLogic) => {
       if (detailedInvoice.products && detailedInvoice.products.length > 0) {
         const formattedProducts = detailedInvoice.products.map((item, index) => {
           const product = item.product || {};
+          const productKey = uuidv4();
+          updatedCreationOrder.push({ key: productKey, type: 'product' });
           
           return {
             _id: product._id,
-            _selectedKey: `edit-product-${product._id}-${index}-${Date.now()}`,
+            _selectedKey: productKey,
             name: product.name || "Unknown Product",
             code: product.code || "",
             sellingPrice: item.price || 0,
@@ -281,11 +366,13 @@ export const useInvoiceHandlers = (invoiceLogic) => {
       if (detailedInvoice.services && detailedInvoice.services.length > 0) {
         const formattedServices = detailedInvoice.services.map((item, index) => {
           const service = item.service || {};
+          const serviceKey = uuidv4();
+          updatedCreationOrder.push({ key: serviceKey, type: 'service' });
           
           return {
             _id: service._id,
-            _selectedKey: `edit-service-${service._id}-${index}-${Date.now()}`,
-            name: service.name || "Unknown Service",
+            _selectedKey: serviceKey,
+            name: service.name || "",
             code: service.code || "",
             price: item.price || 0,
             quantity: item.quantity || 0,
@@ -302,8 +389,11 @@ export const useInvoiceHandlers = (invoiceLogic) => {
       // Add missing credits loading logic
       if (detailedInvoice.credits && detailedInvoice.credits.length > 0) {
         const formattedCredits = detailedInvoice.credits.map((item) => {
+          const creditKey = item._id || uuidv4();
+          updatedCreationOrder.push({ key: creditKey, type: 'credit' });
           return {
-            _id: item._id || `credit-${Date.now()}-${Math.random()}`,
+            _id: item._id || creditKey,
+            _selectedKey: creditKey,
             title: item.title || "Credit",
             amount: item.amount || 0,
             note: item.note || "",
@@ -316,6 +406,8 @@ export const useInvoiceHandlers = (invoiceLogic) => {
         setSelectedCredits([]);
       }
 
+      setCreationOrder(updatedCreationOrder);
+
       setView("create");
     } catch (error) {
       console.error("Error fetching invoice details for editing:", error);
@@ -326,31 +418,29 @@ export const useInvoiceHandlers = (invoiceLogic) => {
   };
 
   // Product handlers
-  const handleProductSelect = (product) => {
+  const handleProductSelect = (product, options = {}) => {
+    const { insertIndex = null } = options;
     const newKey = getUniqueKey();
-    const exists = selectedProducts.some((p) => p._selectedKey === newKey);
-    if (!exists) {
-      const newProduct = {
-        ...product,
-        quantity: product.quantity || 1,
-        note: product.name || "",
-        selectedBatch: product.selectedBatch,
-        purchasePrice: product.purchasePrice || 0,
-        _selectedKey: newKey,
-        creationIndex: creationOrder.length,
-      };
 
-      setSelectedProducts([newProduct, ...selectedProducts]);
-      setCreationOrder(prev => [...prev, { key: newKey, type: 'product' }]);
+    const newProduct = {
+      ...product,
+      quantity: product.quantity || 1,
+      note: product.note || product.name || "",
+      selectedBatch: product.selectedBatch,
+      purchasePrice: product.purchasePrice || 0,
+      _selectedKey: newKey,
+    };
 
-      setTimeout(() => {
-        const noteInput = noteInputRefs.current[newKey];
-        if (noteInput) {
-          noteInput.focus();
-          noteInput.select();
-        }
-      }, 100);
-    }
+    setSelectedProducts((prevProducts) => [...prevProducts, newProduct]);
+    addToCreationOrder(newKey, 'product', insertIndex);
+
+    setTimeout(() => {
+      const noteInput = noteInputRefs.current[newKey];
+      if (noteInput) {
+        noteInput.focus();
+        noteInput.select();
+      }
+    }, 100);
   };
 
   const handleProductQuantityChange = (productId, quantity) => {
@@ -376,6 +466,7 @@ export const useInvoiceHandlers = (invoiceLogic) => {
       const matchKey = p._selectedKey || p._id;
       return matchKey !== productId;
     }));
+    removeFromCreationOrder(productId);
   };
 
   const handleProductNoteChange = (productId, note, field, value) => {
@@ -397,19 +488,19 @@ export const useInvoiceHandlers = (invoiceLogic) => {
   };
 
   // Service handlers
-  const handleServiceSelect = (service) => {
+  const handleServiceSelect = (service, options = {}) => {
+    const { insertIndex = null } = options;
     const newKey = getUniqueKey();
     const newService = {
       ...service, 
-      quantity: 1, 
-      note: service.name || "",
+      quantity: service.quantity || 1, 
+      note: service.note || service.name || "",
       _selectedKey: newKey,
       uniqueId: Date.now() + Math.random(),
-      creationIndex: creationOrder.length,
     };
 
-    setSelectedServices([newService, ...selectedServices]);
-    setCreationOrder(prev => [...prev, { key: newKey, type: 'service' }]);
+    setSelectedServices((prevServices) => [...prevServices, newService]);
+    addToCreationOrder(newKey, 'service', insertIndex);
 
     setTimeout(() => {
       const noteInput = noteInputRefs.current[newKey];
@@ -461,6 +552,7 @@ export const useInvoiceHandlers = (invoiceLogic) => {
       const matchKey = s._selectedKey || s.uniqueId || s._id;
       return matchKey !== serviceId;
     }));
+    removeFromCreationOrder(serviceId);
   };
 
   // Credit handlers
@@ -469,11 +561,10 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     const newCredit = {
       ...creditData,
       _selectedKey: newKey,
-      creationIndex: creationOrder.length,
     };
 
-    setSelectedCredits([newCredit, ...selectedCredits]);
-    setCreationOrder(prev => [...prev, { key: newKey, type: 'credit' }]);
+    setSelectedCredits((prevCredits) => [...prevCredits, newCredit]);
+    addToCreationOrder(newKey, 'credit');
 
     setTimeout(() => {
       const noteInput = noteInputRefs.current[newKey];
@@ -498,63 +589,164 @@ export const useInvoiceHandlers = (invoiceLogic) => {
       const matchKey = c._selectedKey || c._id;
       return matchKey !== creditId;
     }));
+    removeFromCreationOrder(creditId);
   };
 
   // Form handlers
   const handleEmptyRowSearch = (rowId, searchTerm) => {
-    setEmptyRows(
-      emptyRows.map((row) => (row.id === rowId ? { ...row, searchTerm } : row))
+    setEmptyRows((prevRows) =>
+      prevRows.map((row) => (row.id === rowId ? { ...row, searchTerm } : row))
     );
   };
 
   const handleRemoveEmptyRow = (rowId) => {
-    if (emptyRows.length > 1) {
-      setEmptyRows(emptyRows.filter((row) => row.id !== rowId));
+    setEmptyRows((prevRows) => {
+      if (prevRows.length <= 1) {
+        return prevRows;
+      }
+      return prevRows.filter((row) => row.id !== rowId);
+    });
+  };
+
+  const replaceRowWithDefault = (rowId) => {
+    setEmptyRows((prevRows) => {
+      const remaining = prevRows.filter((row) => row.id !== rowId);
+      return [...remaining, createEmptyRow()];
+    });
+  };
+
+  const finalizeInsertContext = (context) => {
+    if (!context) {
+      return;
+    }
+
+    if (context.source === 'inline') {
+      setInlineInsert(null);
+    } else if (context.rowId) {
+      replaceRowWithDefault(context.rowId);
     }
   };
 
-  const handleEmptyRowItemSelect = (rowId, item) => {
-    if (itemType === 'product') {
-      if (item.purchasePricebatch && item.purchasePricebatch.length > 0) {
-        setSelectedProductForBatch(item);
-        setPendingRowId(rowId);
-        setBatchModalOpen(true);
+  const getInsertOptions = (context = {}) => {
+    if (typeof context.insertIndex === 'number') {
+      return { insertIndex: context.insertIndex };
+    }
+    return {};
+  };
+
+  const startProductInsert = (product, context) => {
+    const insertOptions = getInsertOptions(context);
+
+    if (product.purchasePricebatch && product.purchasePricebatch.length > 0) {
+      setSelectedProductForBatch({ ...product, _insertContext: context });
+      if (context.source === 'default') {
+        setPendingRowId(context.rowId);
       } else {
-        handleProductSelect(item);
-        setEmptyRows((prev) => [
-          ...prev.filter((r) => r.id !== rowId),
-          { id: uuidv4(), searchTerm: "" },
-        ]);
+        setPendingRowId(null);
       }
+      setBatchModalOpen(true);
+      return;
+    }
+
+    handleProductSelect(product, insertOptions);
+    finalizeInsertContext(context);
+  };
+
+  const startServiceInsert = (service, context) => {
+    handleServiceSelect(service, getInsertOptions(context));
+    finalizeInsertContext(context);
+  };
+
+  const startCreditInsert = (credit, context) => {
+    handleCreditSelect(credit, getInsertOptions(context));
+    finalizeInsertContext(context);
+  };
+
+  const handleEmptyRowItemSelect = (rowId, item) => {
+    const context = {
+      source: 'default',
+      rowId,
+      insertIndex: creationOrder.length,
+    };
+
+    if (itemType === 'product') {
+      startProductInsert(item, context);
     } else if (itemType === 'service') {
-      handleServiceSelect(item);
-      setEmptyRows((prev) => [
-        ...prev.filter((r) => r.id !== rowId),
-        { id: uuidv4(), searchTerm: "" },
-      ]);
+      startServiceInsert(item, context);
     } else if (itemType === 'credit') {
-      handleCreditSelect(item);
-      setEmptyRows((prev) => [
-        ...prev.filter((r) => r.id !== rowId),
-        { id: uuidv4(), searchTerm: "" },
-      ]);
+      startCreditInsert(item, context);
+    }
+  };
+
+  const handleAddLineBelow = (afterKey) => {
+    if (!afterKey) {
+      return;
+    }
+
+    const targetIndex = creationOrder.findIndex((entry) => entry.key === afterKey);
+    if (targetIndex === -1) {
+      return;
+    }
+
+    setInlineInsert({
+      index: targetIndex + 1,
+      type: itemType,
+      searchTerm: "",
+    });
+  };
+
+  const handleInlineInsertSearch = (value) => {
+    setInlineInsert((prev) => (prev ? { ...prev, searchTerm: value } : prev));
+  };
+
+  const handleInlineTypeChange = (type) => {
+    setInlineInsert((prev) => (
+      prev
+        ? { ...prev, type, searchTerm: type === 'credit' ? '' : prev.searchTerm }
+        : prev
+    ));
+  };
+
+  const handleCancelInlineInsert = () => {
+    setInlineInsert(null);
+  };
+
+  const handleInlineItemSelect = (item) => {
+    if (!inlineInsert) {
+      return;
+    }
+
+    const context = {
+      source: 'inline',
+      rowId: null,
+      insertIndex: typeof inlineInsert.index === 'number' ? inlineInsert.index : creationOrder.length,
+    };
+
+    const targetType = inlineInsert.type || itemType;
+
+    if (targetType === 'product') {
+      startProductInsert(item, context);
+    } else if (targetType === 'service') {
+      startServiceInsert(item, context);
+    } else if (targetType === 'credit') {
+      startCreditInsert(item, context);
     }
   };
 
   // Add credit select handler
-  const handleCreditSelect = (credit) => {
+  const handleCreditSelect = (credit, options = {}) => {
+    const { insertIndex = null } = options;
     const newKey = getUniqueKey();
     const newCredit = {
       ...credit,
-      note: credit.description || credit.title || "",
+      quantity: 1,
+      note: credit.note || credit.description || credit.title || "",
       _selectedKey: newKey,
-      creationIndex: creationOrder.length,
     };
 
-    setSelectedCredits([newCredit, ...selectedCredits]);
-    setCreationOrder(prev => [...prev, { key: newKey, type: 'credit' }]);
+    setSelectedCredits((prevCredits) => [...prevCredits, newCredit]);
+    addToCreationOrder(newKey, 'credit', insertIndex);
 
-    // Auto-focus on the note input field for the newly added credit
     setTimeout(() => {
       const noteInput = noteInputRefs.current[newKey];
       if (noteInput) {
@@ -565,22 +757,35 @@ export const useInvoiceHandlers = (invoiceLogic) => {
   };
 
   const handleBatchSelect = (batch, quantity) => {
-    if (selectedProductForBatch && pendingRowId) {
+    if (selectedProductForBatch) {
+      const { _insertAfterKey, _insertContext, ...productData } = selectedProductForBatch;
+
       const productWithBatch = {
-        ...selectedProductForBatch,
-        quantity: quantity,
+        ...productData,
+        quantity,
         selectedBatch: batch,
-        purchasePrice: batch.purchasePrice || 0
+        purchasePrice: batch.purchasePrice || 0,
       };
-      
-      handleProductSelect(productWithBatch);
-      
-      setEmptyRows((prev) => [
-        ...prev.filter((r) => r.id !== pendingRowId),
-        { id: uuidv4(), searchTerm: "" },
-      ]);
+
+      let insertOptions = {};
+      if (_insertContext) {
+        insertOptions = getInsertOptions(_insertContext);
+      } else if (_insertAfterKey) {
+        const targetIndex = creationOrder.findIndex((entry) => entry.key === _insertAfterKey);
+        if (targetIndex !== -1) {
+          insertOptions = { insertIndex: targetIndex + 1 };
+        }
+      }
+
+      handleProductSelect(productWithBatch, insertOptions);
+
+      if (_insertContext) {
+        finalizeInsertContext(_insertContext);
+      } else if (pendingRowId) {
+        replaceRowWithDefault(pendingRowId);
+      }
     }
-    
+
     setBatchModalOpen(false);
     setSelectedProductForBatch(null);
     setPendingRowId(null);
@@ -623,7 +828,11 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     const subtotal = netAmount + vatAmount;
     const finalTotal = Math.max(0, subtotal - discount);
 
-    const productsForInvoice = selectedProducts.map((p) => ({
+    const orderedProducts = getOrderedItemsByType('product');
+    const orderedServices = getOrderedItemsByType('service');
+    const orderedCredits = getOrderedItemsByType('credit');
+
+    const productsForInvoice = orderedProducts.map((p) => ({
       product: p._id,
       quantity: p.quantity,
       price: p.sellingPrice,
@@ -633,7 +842,7 @@ export const useInvoiceHandlers = (invoiceLogic) => {
       batchId: p.selectedBatch?._id
     }));
 
-    const servicesForInvoice = selectedServices.map((s) => ({
+    const servicesForInvoice = orderedServices.map((s) => ({
       service: s._id,
       quantity: s.quantity,
       price: s.price,
@@ -641,7 +850,7 @@ export const useInvoiceHandlers = (invoiceLogic) => {
       additionalNote: s.additionalNote,
     }));
 
-    const creditsForInvoice = selectedCredits.map((c) => ({
+    const creditsForInvoice = orderedCredits.map((c) => ({
       title: c.title,
       amount: c.amount,
       note: c.note,
@@ -687,20 +896,21 @@ export const useInvoiceHandlers = (invoiceLogic) => {
 
   // Form reset handler
   const resetInvoiceForm = () => {
-  setSelectedCustomerForInvoice(null);
-  setSelectedProducts([]);
-  setSelectedServices([]);
-  setSelectedCredits([]);
-  setInvoiceDate(new Date().toISOString().split("T")[0]);
-  setLpo("");
-  setError("");
-  setDescription("");
-  setDiscount(0);
-  setEditingInvoice(null);
-  setIsEditMode(false);
-  setItemType('service');
-  setEmptyRows([{ id: uuidv4(), searchTerm: "", type: 'service' }]);
-  setCreationOrder([]);
+    setSelectedCustomerForInvoice(null);
+    setSelectedProducts([]);
+    setSelectedServices([]);
+    setSelectedCredits([]);
+    setInvoiceDate(new Date().toISOString().split("T")[0]);
+    setLpo("");
+    setError("");
+    setDescription("");
+    setDiscount(0);
+    setEditingInvoice(null);
+    setIsEditMode(false);
+    setItemType('service');
+    setEmptyRows([createEmptyRow()]);
+    setCreationOrder([]);
+    setInlineInsert(null);
   };
 
   return {
@@ -756,6 +966,11 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     handleEmptyRowSearch,
     handleRemoveEmptyRow,
     handleEmptyRowItemSelect,
+    handleAddLineBelow,
+    handleInlineInsertSearch,
+    handleInlineItemSelect,
+    handleInlineTypeChange,
+    handleCancelInlineInsert,
     handleBatchSelect,
     handleCreateInvoice,
     resetInvoiceForm,
