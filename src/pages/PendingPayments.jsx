@@ -510,7 +510,7 @@ const PendingPayments = () => {
               Use the payment modal to deduct from this balance or capture any excess as a top-up.
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+          {/* <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Add Balance (AED)
@@ -533,7 +533,7 @@ const PendingPayments = () => {
             >
               {addingBalance ? "Updating..." : "Add Balance"}
             </button>
-          </div>
+          </div> */}
         </div>
       )}
 
