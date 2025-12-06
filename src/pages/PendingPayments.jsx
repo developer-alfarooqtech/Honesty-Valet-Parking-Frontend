@@ -537,7 +537,7 @@ const PendingPayments = () => {
         </div>
       )}
 
-      {/* Payment Actions */}
+      {/* Payment Actions date */}
       {Object.keys(selectedInvoices).length > 0 && (
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
