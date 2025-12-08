@@ -29,6 +29,27 @@ import { handleDownloadPDF } from "../components/Purchase_invoices_comp/Download
 import InvoiceStatsBar from "../components/Purchase_invoices_comp/InvoiceStatsBar";
 import LPOFormModal from "../components/Purchase_invoices_comp/LPOFormModal";
 
+const resolveCreatorLabel = (createdBy) => {
+  if (!createdBy) {
+    return "Unknown";
+  }
+
+  if (typeof createdBy === "string") {
+    return createdBy;
+  }
+
+  return (
+    createdBy.name ||
+    createdBy.fullName ||
+    createdBy.username ||
+    createdBy.loginId ||
+    createdBy.email ||
+    createdBy.displayName ||
+    createdBy._id ||
+    "Unknown"
+  );
+};
+
 const PurchaseInvoices = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [supplierId, setSupplierId] = useState("");
@@ -284,6 +305,7 @@ const PurchaseInvoices = () => {
         Invoice: inv.name || "N/A",
         Date: formatDate(inv.date) || formatDate(inv.createdAt) || "N/A",
         Supplier: inv.supplierId?.name || "N/A",
+        "Created By": resolveCreatorLabel(inv.createdBy),
         Total: inv?.total || "N/A",
         Balance: inv.balanceToPay,
       }));

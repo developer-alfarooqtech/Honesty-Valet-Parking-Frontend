@@ -254,6 +254,27 @@ const CreditNotes = () => {
     return `AED ${safeValue.toFixed(2)}`;
   };
 
+  const getCreatedByLabel = (creditNote = {}) => {
+    const creator = creditNote.createdBy;
+    if (!creator) {
+      return "Unknown";
+    }
+
+    if (typeof creator === "string") {
+      return creator;
+    }
+
+    return (
+      creator.name ||
+      creator.fullName ||
+      creator.username ||
+      creator.email ||
+      creator.displayName ||
+      creator._id ||
+      "Unknown"
+    );
+  };
+
   const invoiceLineItemGroups = useMemo(() => {
     if (!invoiceDetails) return [];
 
@@ -1253,6 +1274,7 @@ const CreditNotes = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Type</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Invoice/Reference</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Customer</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Created By</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Amount</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Date</th>
@@ -1262,7 +1284,7 @@ const CreditNotes = () => {
                   <tbody className="bg-white divide-y divide-blue-100">
                     {loading ? (
                       <tr>
-                        <td colSpan="9" className="px-6 py-12 text-center">
+                        <td colSpan="10" className="px-6 py-12 text-center">
                           <div className="flex justify-center items-center">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                             <span className="ml-2 text-blue-600">Loading credit notes...</span>
@@ -1271,7 +1293,7 @@ const CreditNotes = () => {
                       </tr>
                     ) : creditNotes.length === 0 ? (
                       <tr>
-                        <td colSpan="9" className="px-6 py-12 text-center text-blue-500">
+                        <td colSpan="10" className="px-6 py-12 text-center text-blue-500">
                           {debouncedSearchTerm
                             ? "No credit notes found matching your search."
                             : "No credit notes found. Create your first credit note!"}
@@ -1323,6 +1345,9 @@ const CreditNotes = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                             {creditNote.customer?.name || 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            {getCreatedByLabel(creditNote)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-red-600">
                             -{formatCurrency(creditNote.creditAmount)}

@@ -80,6 +80,27 @@ const getDaysPastDue = (dateString) => {
   return diffDays;
 };
 
+  const getCreatedByLabel = (invoice) => {
+    const creator = invoice?.createdBy;
+    if (!creator) {
+      return "Unknown";
+    }
+
+    if (typeof creator === "string") {
+      return creator;
+    }
+
+    return (
+      creator.name ||
+      creator.fullName ||
+      creator.username ||
+      creator.email ||
+      creator.displayName ||
+      creator._id ||
+      "Unknown"
+    );
+  };
+
   // Helper function to get selectable invoices  cancelled)
   const getSelectableInvoices = () => {
     return invoices.filter(invoice =>  !invoice.isCancelled);
@@ -163,6 +184,9 @@ const getDaysPastDue = (dateString) => {
               Date
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+              Created By
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
               Amount
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
@@ -179,7 +203,7 @@ const getDaysPastDue = (dateString) => {
         <tbody className="bg-white divide-y divide-blue-100">
           {invoices.length === 0 ? (
             <tr>
-              <td colSpan="8" className="px-6 py-12 text-center">
+              <td colSpan="9" className="px-6 py-12 text-center">
                 <div className="flex flex-col items-center justify-center space-y-3">
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
                     <FileText className="w-8 h-8 text-blue-400" />
@@ -231,6 +255,11 @@ const getDaysPastDue = (dateString) => {
                   <div className="text-sm text-gray-700">
                     <p className="font-medium">{formatDate(invoice?.date)}</p>
                     {/* <p className="text-xs text-gray-500">Created: {formatDate(invoice?.createdAt)}</p> */}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-700">
+                    <p className="font-medium">{getCreatedByLabel(invoice)}</p>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">

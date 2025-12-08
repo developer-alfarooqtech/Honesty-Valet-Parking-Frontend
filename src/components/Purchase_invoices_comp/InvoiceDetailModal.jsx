@@ -18,9 +18,31 @@ import {
   MapPin,
   Hash,
   Truck,
+  UserCircle,
 } from "lucide-react";
 import PrintInv from "./PrintInv";
 import PaymentModal from "./PaymentModal";
+
+const resolveCreatorLabel = (createdBy) => {
+  if (!createdBy) {
+    return "Unknown";
+  }
+
+  if (typeof createdBy === "string") {
+    return createdBy;
+  }
+
+  return (
+    createdBy.name ||
+    createdBy.fullName ||
+    createdBy.username ||
+    createdBy.loginId ||
+    createdBy.email ||
+    createdBy.displayName ||
+    createdBy._id ||
+    "Unknown"
+  );
+};
 
 // Header Component
 const ModalHeader = ({ onClose, lpo }) => (
@@ -369,6 +391,11 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
                     value={new Date(currentInvoice.date).toLocaleDateString(
                       "en-GB"
                     )}
+                  />
+                  <InfoRow
+                    icon={UserCircle}
+                    label="Created By"
+                    value={resolveCreatorLabel(currentInvoice.createdBy)}
                   />
                 </div>
               </InfoCard>

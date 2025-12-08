@@ -8,8 +8,30 @@ import {
   Recycle,
   Repeat,
   X,
+  UserCircle,
 } from "lucide-react";
 import CancelLPOModal from "./CancelLPOModal";
+
+const resolveCreatorLabel = (createdBy) => {
+  if (!createdBy) {
+    return "Unknown";
+  }
+
+  if (typeof createdBy === "string") {
+    return createdBy;
+  }
+
+  return (
+    createdBy.name ||
+    createdBy.fullName ||
+    createdBy.username ||
+    createdBy.loginId ||
+    createdBy.email ||
+    createdBy.displayName ||
+    createdBy._id ||
+    "Unknown"
+  );
+};
 
 const InvoiceList = ({
   invoices,
@@ -60,6 +82,12 @@ const InvoiceList = ({
                 </div>
               </th>
               <th className="p-3 text-left font-semibold border-b border-blue-100">
+                <div className="flex items-center">
+                  <UserCircle className="w-5 h-5 text-white mr-2" />
+                  Created By
+                </div>
+              </th>
+              <th className="p-3 text-left font-semibold border-b border-blue-100">
                 Total
               </th>
               <th className="p-3 text-left font-semibold border-b border-blue-100">
@@ -106,6 +134,11 @@ const InvoiceList = ({
                 </td>
                 <td className="p-3 text-gray-600">
                   {inv.supplier?.name || "N/A"}
+                </td>
+                <td className="p-3 text-gray-700">
+                  <p className="font-semibold">
+                    {resolveCreatorLabel(inv.createdBy)}
+                  </p>
                 </td>
                 <td className="p-3 text-blue-600 font-bold">
                   {inv.total.toFixed(2)}

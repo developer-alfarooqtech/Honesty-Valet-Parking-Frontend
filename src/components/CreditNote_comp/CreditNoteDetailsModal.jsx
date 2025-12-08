@@ -4,6 +4,26 @@ import { processCreditNote, cancelCreditNote, deleteCreditNote } from "../../ser
 import { toast } from "react-hot-toast";
 import { printMultipleCreditNotes } from "./PrintCreditNote";
 
+const resolveCreatorLabel = (createdBy) => {
+  if (!createdBy) {
+    return "Unknown";
+  }
+
+  if (typeof createdBy === "string") {
+    return createdBy;
+  }
+
+  return (
+    createdBy.name ||
+    createdBy.fullName ||
+    createdBy.username ||
+    createdBy.email ||
+    createdBy.displayName ||
+    createdBy._id ||
+    "Unknown"
+  );
+};
+
 const CreditNoteDetailsModal = ({ creditNote, isOpen, onClose, onUpdate, onEdit, onDelete }) => {
   const [showProcessModal, setShowProcessModal] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -251,6 +271,13 @@ const CreditNoteDetailsModal = ({ creditNote, isOpen, onClose, onUpdate, onEdit,
                       <span className="text-sm font-medium min-w-[120px]">Credit Date:</span>
                     </div>
                     <span className="font-semibold text-gray-800 text-right">{formatDate(creditNote.date)}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2">
+                    <div className="flex items-center text-gray-600">
+                      <User className="w-4 h-4 text-blue-500 mr-2" />
+                      <span className="text-sm font-medium min-w-[120px]">Created By:</span>
+                    </div>
+                    <span className="font-semibold text-gray-800 text-right">{resolveCreatorLabel(creditNote.createdBy)}</span>
                   </div>
                 </div>
               </div>

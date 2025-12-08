@@ -24,12 +24,34 @@ import {
 import PrintInv from "./PrintInv";
 import PaymentModal from "./PaymentModal";  
 
+const resolveCreatorName = (createdBy) => {
+  if (!createdBy) {
+    return "Unknown";
+  }
+
+  if (typeof createdBy === "string") {
+    return createdBy;
+  }
+
+  return (
+    createdBy.name ||
+    createdBy.fullName ||
+    createdBy.username ||
+    createdBy.email ||
+    createdBy.displayName ||
+    createdBy._id ||
+    "Unknown"
+  );
+};
+
 // Simple Header
 const ModalHeader = ({ onClose, invoice }) => (
   <div className="bg-blue-600 text-white px-6 py-4 flex justify-between items-center border-b border-blue-700">
     <div>
       <h2 className="text-lg font-semibold">Invoice #{invoice?.name}</h2>
-      <p className="text-blue-100 text-sm">Invoice Details</p>
+      <p className="text-blue-100 text-sm">
+        Invoice Details • Created by {resolveCreatorName(invoice?.createdBy)}
+      </p>
     </div>
     <button
       onClick={onClose}
@@ -348,6 +370,10 @@ const InvoiceDetailModal = ({
                       <span className="font-medium text-gray-800">{currentInvoice.lpo}</span>
                     </div>
                   )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Created By:</span>
+                      <span className="font-medium text-gray-800">{resolveCreatorName(currentInvoice.createdBy)}</span>
+                    </div>
                 </div>
               </div>
 
