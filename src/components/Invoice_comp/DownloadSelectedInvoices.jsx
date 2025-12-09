@@ -251,6 +251,12 @@ export const printMultipleInvoicesJsPDF = async (invoices, includeSeal = false, 
 
       // Signature boxes at bottom
       const footerY = pageHeight - 45;
+
+      // Black separator line matching table border thickness (≈1.5px)
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.4);
+      const separatorY = footerY - 18;
+      doc.line(margin, separatorY, pageWidth - margin, separatorY);
       
       // Left side - Seal and Customer Signature
       const boxWidth = (contentWidth - 10) / 2;
@@ -1001,6 +1007,7 @@ const createFooterSection = (invoice, includeSeal = false, includeSignature = fa
 
   // Always show full footer with boxes, but conditionally include seal/signature images
   footer.innerHTML = `
+    <div style="width: 100%; height: 1.5px; background: #000; margin-bottom: 12px; margin-top: -18px;"></div>
     <div style="display: flex; flex-direction: column; gap: 10px;">
       <div style="display: flex; justify-content: space-between; gap: 20px;">
         <!-- Top boxes with signature and empty -->
