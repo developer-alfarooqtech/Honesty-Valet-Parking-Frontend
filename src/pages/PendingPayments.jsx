@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Search, X, DollarSign } from "lucide-react";
+import { Search, X, DollarSign, Download } from "lucide-react";
 import useDebounce from "../hooks/useDebounce";
 import Pagination from "../components/Pagination";
 import CustomerSearch from "../components/PendingPayments_comp/CustomerSearch";
@@ -9,10 +9,8 @@ import {
   addCustomerBalance,
 } from "../service/pendingPaymentsService";
 import toast from "react-hot-toast";
-import {
-  SortButton,
-  TableHeaders,
-} from "../components/PendingPayments_comp/TableHead";
+import { TableHeaders } from "../components/PendingPayments_comp/TableHead";
+import { exportPendingPaymentsToExcel } from "../utils/pendingPaymentsExport";
 
 const PendingPayments = () => {
   const [invoices, setInvoices] = useState([]);
@@ -318,6 +316,32 @@ const PendingPayments = () => {
     setShowPaymentModal(true);
   };
 
+  const handleExportSelected = () => {
+    const payments = getValidPayments();
+
+    if (!payments.length) {
+      toast.error("Select at least one invoice to export");
+      return;
+    }
+
+    const enriched = payments.map(({ invoice, paymentData }) => ({
+      invoice,
+      paymentData,
+      totals: calculateRealTimeValues(invoice, paymentData),
+    }));
+
+    try {
+      exportPendingPaymentsToExcel({
+        customer: filters.customer,
+        payments: enriched,
+      });
+      toast.success("Excel file generated");
+    } catch (error) {
+      console.error("Error exporting pending payments:", error);
+      toast.error("Unable to export selected invoices");
+    }
+  };
+
   const handleAddBalance = async () => {
     if (!filters.customer?._id) {
       toast.error("Select a customer before adding balance");
@@ -376,10 +400,12 @@ const PendingPayments = () => {
 
   // Calculate totals for selected invoices with valid payment data
   const getValidPayments = () => {
-    return Object.keys(paymentData).map((invoiceId) => ({
-      invoice: selectedInvoices[invoiceId],
-      paymentData: paymentData[invoiceId],
-    }));
+    return Object.keys(paymentData)
+      .filter((invoiceId) => selectedInvoices[invoiceId])
+      .map((invoiceId) => ({
+        invoice: selectedInvoices[invoiceId],
+        paymentData: paymentData[invoiceId],
+      }));
   };
 
   const selectedCustomerBalance = filters.customer
@@ -552,13 +578,22 @@ const PendingPayments = () => {
                 </p>
               )}
             </div>
-            <button
-              onClick={handlePaymentSubmit}
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center gap-2"
-            >
-              <DollarSign size={16} />
-              Process Payments
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={handleExportSelected}
+                className="px-4 py-2 border border-blue-500 text-blue-600 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-2"
+              >
+                <Download size={16} />
+                Export Selected
+              </button>
+              <button
+                onClick={handlePaymentSubmit}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center gap-2"
+              >
+                <DollarSign size={16} />
+                Process Payments
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -102,7 +102,7 @@ export const printMultipleInvoicesJsPDF = async (invoices, includeSeal = false, 
       yPos += 5;
       doc.text('PO Box: 49112, Dubai-UAE', margin, yPos);
       yPos += 5;
-      doc.setFontSize(9);
+      doc.setFontSize(10);
       doc.text('Email: sales@honestynperfection.com', margin, yPos);
       yPos += 5;
       doc.text('VAT Reg No: 100596686400003', margin, yPos);
