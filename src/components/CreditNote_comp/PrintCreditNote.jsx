@@ -290,7 +290,7 @@ const renderCreditNotePage = (doc, creditNote, assets = {}, options = {}) => {
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.text("CREDIT NOTE", rightBoxX, yPos - 2);
+  doc.text("TAX CREDIT NOTE", rightBoxX, yPos - 2);
   drawRoundedRect(doc, rightBoxX, yPos, rightBoxWidth, metaHeight, 2);
 
   for (let i = 1; i < metaRows.length; i += 1) {
