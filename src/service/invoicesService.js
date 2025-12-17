@@ -74,3 +74,12 @@ export const cancelInvoice = async (invoiceId) => {
   return await api.put(`/cancel-invoice/${invoiceId}`);
 };
 
+export const uploadInvoicesFile = async (formData, onUploadProgress) => {
+  return await api.post("/invoices/import", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+    onUploadProgress,
+  });
+};
+

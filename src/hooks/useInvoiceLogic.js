@@ -36,6 +36,10 @@ export const useInvoiceLogic = () => {
   const [exportingPDF, setExportingPDF] = useState(false);
   const [printingInvoices, setPrintingInvoices] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importingInvoices, setImportingInvoices] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [importSummary, setImportSummary] = useState(null);
 
   // Invoice creation states
   const [selectedCustomerForInvoice, setSelectedCustomerForInvoice] = useState(null);
@@ -522,6 +526,10 @@ export const useInvoiceLogic = () => {
     exportingPDF, setExportingPDF,
     printingInvoices, setPrintingInvoices,
     exportingExcel, setExportingExcel,
+    isImportModalOpen, setIsImportModalOpen,
+    importingInvoices, setImportingInvoices,
+    importProgress, setImportProgress,
+    importSummary, setImportSummary,
   selectedCustomerForInvoice, setSelectedCustomerForInvoice,
   selectedProducts, setSelectedProducts,
   selectedServices, setSelectedServices,

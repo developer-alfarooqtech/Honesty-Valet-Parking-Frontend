@@ -333,6 +333,17 @@ const InvoiceDetailModal = ({
     });
   };
 
+  const formatDateTime = (date) => {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleString("en-GB", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   const formatAddress = (address) => {
     if (!address) return 'N/A';
     const parts = [address.address1, address.address2, address.address3].filter(Boolean);
@@ -376,6 +387,50 @@ const InvoiceDetailModal = ({
                     </div>
                 </div>
               </div>
+
+              {(currentInvoice.uploadSource || currentInvoice.uploadBatchId || currentInvoice.uploadBatchLabel || currentInvoice.uploadedAt || currentInvoice.uploadedFileName) && (
+                <div className="bg-white border border-blue-200 p-5 rounded">
+                  <h3 className="text-base font-semibold text-blue-700 mb-4 pb-2 border-b border-blue-100">Batch Upload Details</h3>
+                  <div className="space-y-3 text-sm">
+                    {currentInvoice.uploadSource && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Source:</span>
+                        <span className="font-medium text-gray-800">
+                          {currentInvoice.uploadSource === 'upload' ? 'Bulk upload' : 'Manual entry'}
+                        </span>
+                      </div>
+                    )}
+                    {currentInvoice.uploadBatchId && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Batch ID:</span>
+                        <span className="font-mono text-gray-800">{currentInvoice.uploadBatchId}</span>
+                      </div>
+                    )}
+                    {currentInvoice.uploadBatchLabel && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Batch Label:</span>
+                        <span className="font-medium text-gray-800">{currentInvoice.uploadBatchLabel}</span>
+                      </div>
+                    )}
+                    {currentInvoice.uploadedFileName && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">File Name:</span>
+                        <span className="font-medium text-gray-800" title={currentInvoice.uploadedFileName}>
+                          {currentInvoice.uploadedFileName.length > 24
+                            ? `${currentInvoice.uploadedFileName.slice(0, 21)}...`
+                            : currentInvoice.uploadedFileName}
+                        </span>
+                      </div>
+                    )}
+                    {currentInvoice.uploadedAt && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Uploaded At:</span>
+                        <span className="font-medium text-gray-800">{formatDateTime(currentInvoice.uploadedAt)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Customer Info */}
               {currentInvoice.customer && (

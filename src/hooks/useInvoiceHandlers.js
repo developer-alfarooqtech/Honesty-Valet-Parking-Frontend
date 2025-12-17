@@ -6,6 +6,7 @@ import {
   updateInvoiceExpDate,
   createInvoiceDirectly,
   updateInvoice,
+  uploadInvoicesFile,
 } from "../service/invoicesService";
 
 export const useInvoiceHandlers = (invoiceLogic) => {
@@ -45,6 +46,10 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     pendingRowId, setPendingRowId,
     noteInputRefs,
     duplicateGuard,
+    setIsImportModalOpen,
+    setImportingInvoices,
+    setImportProgress,
+    setImportSummary,
 
     // Functions
     getUniqueKey,
@@ -842,6 +847,98 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     setPendingRowId(null);
   };
 
+  const openImportInvoicesModal = () => {
+    setImportSummary(null);
+    setImportProgress(0);
+    setIsImportModalOpen(true);
+  };
+
+  const closeImportInvoicesModal = () => {
+    setIsImportModalOpen(false);
+  };
+
+  const handleInvoicesImport = async (file) => {
+    if (!file) {
+      toast.error("Please select a file to upload");
+      return;
+    }
+
+    const allowedExtensions = [".csv", ".xls", ".xlsx"];
+    const fileName = file.name?.toLowerCase() || "";
+    const isValidExtension = allowedExtensions.some((ext) => fileName.endsWith(ext));
+
+    if (!isValidExtension) {
+      toast.error("Only .csv, .xls, or .xlsx files are supported");
+      return;
+    }
+
+    const maxSizeMb = 5;
+    if (file.size > maxSizeMb * 1024 * 1024) {
+      toast.error(`File must be smaller than ${maxSizeMb}MB`);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    setImportingInvoices(true);
+    setImportProgress(0);
+    setImportSummary(null);
+
+    try {
+      const response = await uploadInvoicesFile(formData, (event) => {
+        if (!event?.total) return;
+        const percent = Math.round((event.loaded / event.total) * 100);
+        setImportProgress(percent);
+      });
+
+      const data = response.data;
+      const summary = data.summary || null;
+      setImportSummary(summary);
+
+      const failureMessage = summary?.failures?.[0]
+        ? `Row ${summary.failures[0].rowNumber}: ${summary.failures[0].error}`
+        : null;
+
+      if (data.success) {
+        toast.success(data.message || "Invoices imported successfully");
+      } else {
+        const message = failureMessage || data.message || "Some invoices failed to import";
+        toast.error(message);
+      }
+
+      fetchInvoices();
+      fetchStats();
+    } catch (error) {
+      const responseSummary = error.response?.data?.summary;
+      const failure = responseSummary?.failures?.[0];
+      const message =
+        failure?.error
+          ? `Row ${failure.rowNumber}: ${failure.error}`
+          : error.response?.data?.message || "Failed to import invoices";
+
+      toast.error(message);
+
+      setImportSummary(
+        responseSummary || {
+          totalRows: 0,
+          importedCount: 0,
+          failedCount: 1,
+          successes: [],
+          failures: [
+            {
+              rowNumber: "-",
+              error: message,
+            },
+          ],
+        }
+      );
+    } finally {
+      setImportingInvoices(false);
+      setImportProgress(0);
+    }
+  };
+
   // Create/Update invoice handler
   const handleCreateInvoice = async () => {
     const trimmedDescription = description.trim();
@@ -1037,5 +1134,8 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     handleCreateInvoice,
     exitDuplicateMode,
     resetInvoiceForm,
+    openImportInvoicesModal,
+    closeImportInvoicesModal,
+    handleInvoicesImport,
   };
 };

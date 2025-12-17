@@ -8,6 +8,7 @@ import {
   Plus,
   X,
   Printer,
+  UploadCloud,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Pagination from "../components/Pagination";
@@ -19,6 +20,7 @@ import InvoiceStats from "../components/Invoice_comp/InvoiceStats";
 import { printMultipleInvoicesJsPDF as printMultipleInvoices } from "../components/Invoice_comp/DownloadSelectedInvoices";
 import ConfirmationModal from "../components/SalesOrder_comp/ConfirmationModal";
 import ProductNoteModal from "../components/SalesOrder_comp/ProductNoteModal";
+import InvoiceImportModal from "../components/Invoice_comp/InvoiceImportModal";
 
 // Import new components
 import InvoiceFiltersPanel from "../components/Invoice_comp/InvoiceFiltersPanel";
@@ -112,6 +114,10 @@ const Invoices = () => {
     downloadPdf,
     handleDownloadExcel,
     exportingExcel,
+    isImportModalOpen,
+    importingInvoices,
+    importProgress,
+    importSummary,
   } = invoiceLogic;
 
   const {
@@ -156,6 +162,9 @@ const Invoices = () => {
     handleBatchSelect,
     handleCreateInvoice,
     exitDuplicateMode,
+    openImportInvoicesModal,
+    closeImportInvoicesModal,
+    handleInvoicesImport,
   } = invoiceHandlers;
 
   // Note handling functions
@@ -190,7 +199,7 @@ const Invoices = () => {
 
   return (
     <div className="p-6 bg-blue-50 min-h-screen">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <header className="flex items-center space-x-4">
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-lg shadow-lg">
             <FileText size={24} className="text-white" />
@@ -201,29 +210,41 @@ const Invoices = () => {
           </div>
         </header>
 
-        {view === "list" ? (
-          <button
-            onClick={() => {
-              setView("create");
-              resetInvoiceForm();
-            }}
-            className="flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all duration-300 shadow-lg"
-          >
-            <Plus size={20} className="mr-2" />
-            Create Invoice
-          </button>
-        ) : (
-          <button
-            onClick={() => {
-              setView("list");
-              resetInvoiceForm();
-            }}
-            className="flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all duration-300 shadow-lg"
-          >
-            <X size={20} className="mr-2" />
-            Cancel
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          {view === "list" && (
+            <button
+              onClick={openImportInvoicesModal}
+              className="flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-2 text-blue-600 shadow-sm transition hover:border-blue-400 hover:bg-blue-50"
+            >
+              <UploadCloud size={18} />
+              Import Invoices
+            </button>
+          )}
+
+          {view === "list" ? (
+            <button
+              onClick={() => {
+                setView("create");
+                resetInvoiceForm();
+              }}
+              className="flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all duration-300 shadow-lg"
+            >
+              <Plus size={20} className="mr-2" />
+              Create Invoice
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setView("list");
+                resetInvoiceForm();
+              }}
+              className="flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all duration-300 shadow-lg"
+            >
+              <X size={20} className="mr-2" />
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -467,6 +488,15 @@ const Invoices = () => {
           itemType={noteType}
         />
       )}
+
+      <InvoiceImportModal
+        isOpen={isImportModalOpen}
+        onClose={closeImportInvoicesModal}
+        onUpload={handleInvoicesImport}
+        importing={importingInvoices}
+        progress={importProgress}
+        summary={importSummary}
+      />
     </div>
   );
 };
