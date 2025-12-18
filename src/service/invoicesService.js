@@ -80,6 +80,7 @@ export const uploadInvoicesFile = async (formData, onUploadProgress) => {
       "Content-Type": "multipart/form-data",
     },
     onUploadProgress,
+    timeout: 120000,
   });
-};
+}; 
 
