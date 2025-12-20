@@ -35,7 +35,7 @@ const Customers = () => {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [viewingCustomer, setViewingCustomer] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [limit] = useState(10); // Items per page
+  const [limit] = useState(100); // Items per page
   const [exportingPDF, setExportingPDF] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
   // Apply debounce to search term

@@ -461,9 +461,9 @@ const CustomerPickerModal = ({
                           )}
                         </div>
                         <p className="text-sm text-gray-500">Code: {customer.Code || "N/A"}</p>
-                        {customer.Email && (
+                        {customer.address?.address1 && (
                           <p className="text-xs text-gray-400 mt-1">
-                            {customer.Email}
+                            {customer.address?.address1}
                           </p>
                         )}
                         {customer.Phone && (
