@@ -201,10 +201,18 @@ export const printMultipleInvoicesJsPDF = async (invoices, includeSeal = false, 
         const netAmount = (item.price || 0) * (item.quantity || 0);
         const vatAmount = netAmount * (vatRate / 100);
         const totalAmount = netAmount + vatAmount;
+
+        const baseDescription = item?.note || item?.service?.name || item?.product?.name || 'N/A';
+        const additionalNote = item?.additionalNote?.trim();
+        const descriptionParts = [baseDescription];
+        if (additionalNote) {
+          descriptionParts.push(`${additionalNote}`);
+        }
+        const description = descriptionParts.join('\n');
         
         return [
           item.quantity || 0,
-          item?.note || item?.service?.name || item?.product?.name || 'N/A',
+          description,
           (item.price || 0).toFixed(2),
           netAmount.toFixed(2),
           vatAmount.toFixed(2),
@@ -946,19 +954,41 @@ const createTableRows = (items, vatRate = 5) => {
     const netAmount = (item.price || 0) * (item.quantity || 0);
     const vatAmount = netAmount * (vatRate / 100);
     const totalAmount = netAmount + vatAmount;
-    const cells = [
-      item.quantity || 0,
-      item?.note || item?.service?.name || item?.product?.name || "N/A",
-      (item.price || 0).toFixed(2),
-      netAmount.toFixed(2),
-      vatAmount.toFixed(2),
-      totalAmount.toFixed(2)
-    ];
-    cells.forEach((content, i) => {
-      const cell = row.insertCell();
-      cell.textContent = content;
-      cell.style.cssText = `padding: 5px; text-align: ${aligns[i]}; border: none; font-weight: normal; font-size: 15px;`;
-    });
+
+    const baseDescription = item?.note || item?.service?.name || item?.product?.name || "N/A";
+    const additionalNote = item?.additionalNote?.trim();
+
+    const quantityCell = row.insertCell();
+    quantityCell.textContent = item.quantity || 0;
+    quantityCell.style.cssText = `padding: 5px; text-align: ${aligns[0]}; border: none; font-weight: normal; font-size: 15px;`;
+
+    const descriptionCell = row.insertCell();
+    descriptionCell.style.cssText = `padding: 5px; text-align: ${aligns[1]}; border: none; font-weight: normal; font-size: 15px;`;
+    const mainDescription = document.createElement('div');
+    mainDescription.textContent = baseDescription;
+    descriptionCell.appendChild(mainDescription);
+    if (additionalNote) {
+      const noteEl = document.createElement('div');
+      noteEl.textContent = `Additional Note: ${additionalNote}`;
+      noteEl.style.cssText = 'font-size: 13px; color: #444; margin-top: 2px;';
+      descriptionCell.appendChild(noteEl);
+    }
+
+    const unitPriceCell = row.insertCell();
+    unitPriceCell.textContent = (item.price || 0).toFixed(2);
+    unitPriceCell.style.cssText = `padding: 5px; text-align: ${aligns[2]}; border: none; font-weight: normal; font-size: 15px;`;
+
+    const netCell = row.insertCell();
+    netCell.textContent = netAmount.toFixed(2);
+    netCell.style.cssText = `padding: 5px; text-align: ${aligns[3]}; border: none; font-weight: normal; font-size: 15px;`;
+
+    const vatCell = row.insertCell();
+    vatCell.textContent = vatAmount.toFixed(2);
+    vatCell.style.cssText = `padding: 5px; text-align: ${aligns[4]}; border: none; font-weight: normal; font-size: 15px;`;
+
+    const totalCell = row.insertCell();
+    totalCell.textContent = totalAmount.toFixed(2);
+    totalCell.style.cssText = `padding: 5px; text-align: ${aligns[5]}; border: none; font-weight: normal; font-size: 15px;`;
   });
   
   return tbody;

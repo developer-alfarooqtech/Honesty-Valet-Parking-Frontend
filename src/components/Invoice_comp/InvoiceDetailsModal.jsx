@@ -52,6 +52,11 @@ const ModalHeader = ({ onClose, invoice }) => (
       <p className="text-blue-100 text-sm">
         Invoice Details • Created by {resolveCreatorName(invoice?.createdBy)}
       </p>
+      {invoice?.lpo && (
+        <p className="text-blue-100 text-xs mt-1">
+          LPO / Reference: {invoice.lpo}
+        </p>
+      )}
     </div>
     <button
       onClick={onClose}

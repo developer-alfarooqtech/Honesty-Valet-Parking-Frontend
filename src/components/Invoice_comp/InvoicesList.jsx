@@ -244,6 +244,9 @@ const getDaysPastDue = (dateString) => {
                   <div className="text-sm font-medium text-gray-900">
                     {invoice.name}
                   </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    LPO: {invoice.lpo || "N/A"}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-700">
