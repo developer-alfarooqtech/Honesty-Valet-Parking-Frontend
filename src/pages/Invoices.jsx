@@ -25,6 +25,7 @@ import InvoiceImportModal from "../components/Invoice_comp/InvoiceImportModal";
 // Import new components
 import InvoiceFiltersPanel from "../components/Invoice_comp/InvoiceFiltersPanel";
 import InvoiceCreationForm from "../components/Invoice_comp/InvoiceCreationForm";
+import CustomerPickerModal from "../components/Invoice_comp/CustomerPickerModal";
 
 // Import custom hooks
 import { useInvoiceLogic } from "../hooks/useInvoiceLogic";
@@ -56,6 +57,8 @@ const Invoices = () => {
     isFullPayment,
     banks,
     selectedCustomer,
+    selectedCustomers,
+    isCustomerPickerOpen,
     exportingPDF,
     setExportingPDF,
     printingInvoices,
@@ -123,6 +126,11 @@ const Invoices = () => {
   const {
     handleCustomerSelect,
     handleClearCustomer,
+    openCustomerPicker,
+    closeCustomerPicker,
+    handleApplyCustomerFilters,
+    handleRemoveCustomerFilter,
+    handleClearAllCustomers,
     handlePageChange,
     handleInvoiceSelect,
     closeInvoiceDetails,
@@ -265,8 +273,12 @@ const Invoices = () => {
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
             selectedCustomer={selectedCustomer}
+            selectedCustomers={selectedCustomers}
             handleCustomerSelect={handleCustomerSelect}
             handleClearCustomer={handleClearCustomer}
+            handleClearAllCustomers={handleClearAllCustomers}
+            handleRemoveCustomerFilter={handleRemoveCustomerFilter}
+            openCustomerPicker={openCustomerPicker}
             startDate={startDate}
             setStartDate={setStartDate}
             endDate={endDate}
@@ -496,6 +508,13 @@ const Invoices = () => {
         importing={importingInvoices}
         progress={importProgress}
         summary={importSummary}
+      />
+
+      <CustomerPickerModal
+        isOpen={isCustomerPickerOpen}
+        onClose={closeCustomerPicker}
+        selectedCustomers={selectedCustomers}
+        onApply={handleApplyCustomerFilters}
       />
     </div>
   );

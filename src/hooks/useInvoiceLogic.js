@@ -33,6 +33,7 @@ export const useInvoiceLogic = () => {
   const [isFullPayment, setIsFullPayment] = useState(true);
   const [banks, setBanks] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [selectedCustomers, setSelectedCustomers] = useState([]);
   const [exportingPDF, setExportingPDF] = useState(false);
   const [printingInvoices, setPrintingInvoices] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
@@ -98,6 +99,7 @@ export const useInvoiceLogic = () => {
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [selectedProductForBatch, setSelectedProductForBatch] = useState(null);
   const [pendingRowId, setPendingRowId] = useState(null);
+  const [isCustomerPickerOpen, setIsCustomerPickerOpen] = useState(false);
 
   // Refs
   const noteInputRefs = useRef({});
@@ -161,11 +163,21 @@ export const useInvoiceLogic = () => {
     return (productTotal + serviceTotal) - creditTotal;
   };
 
+  const selectedCustomerIds = useMemo(
+    () => selectedCustomers.map((customer) => customer?._id).filter(Boolean),
+    [selectedCustomers]
+  );
+
   // Helper function for Excel download
   const getActiveFiltersText = () => {
     const filters = [];
     if (searchTerm) filters.push(`Search: "${searchTerm}"`);
-    if (selectedCustomer) filters.push(`Customer: ${selectedCustomer.name}`);
+    if (selectedCustomers.length > 0) {
+      const names = selectedCustomers.map((cust) => cust.name).join(", ");
+      filters.push(`Customers: ${names}`);
+    } else if (selectedCustomer) {
+      filters.push(`Customer: ${selectedCustomer.name}`);
+    }
     if (startDate) filters.push(`From: ${new Date(startDate).toLocaleDateString("en-GB")}`);
     if (endDate) filters.push(`To: ${new Date(endDate).toLocaleDateString("en-GB")}`);
     if (showOverdueOnly) filters.push("Overdue Only");
@@ -179,7 +191,7 @@ export const useInvoiceLogic = () => {
   // Effects
   useEffect(() => {
     fetchStats();
-  }, [selectedCustomer]);
+  }, [selectedCustomer, selectedCustomers]);
 
   useEffect(() => {
     fetchInvoices();
@@ -195,6 +207,7 @@ export const useInvoiceLogic = () => {
     showCancelledOnly,
     sortOrder,
     selectedCustomer,
+    selectedCustomers,
   ]);
 
   useEffect(() => {
@@ -213,12 +226,13 @@ export const useInvoiceLogic = () => {
   const fetchStats = async () => {
     setStatsLoading(true);
     try {
-      const customerId = selectedCustomer?._id || "";
+      const customerId = selectedCustomerIds.length === 0 ? selectedCustomer?._id || "" : "";
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 25000);
       
       const response = await fetchInvoiceStats({ 
         customerId,
+        customerIds: selectedCustomerIds,
         signal: controller.signal 
       });
       
@@ -280,7 +294,8 @@ export const useInvoiceLogic = () => {
         pendingOnly: showPendingOnly,
         cancelledOnly: showCancelledOnly,
         sort: sortOrder,
-        customerId: selectedCustomer?._id || "",
+        customerId: selectedCustomerIds.length === 0 ? selectedCustomer?._id || "" : "",
+        customerIds: selectedCustomerIds,
       });
       const data = await response?.data;
 
@@ -321,7 +336,8 @@ export const useInvoiceLogic = () => {
         pendingOnly: showPendingOnly,
         cancelledOnly: showCancelledOnly,
         sort: sortOrder,
-        customerId: selectedCustomer?._id || "",
+        customerId: selectedCustomerIds.length === 0 ? selectedCustomer?._id || "" : "",
+        customerIds: selectedCustomerIds,
       });
 
       if (!response.data || !response.data.invoices) {
@@ -469,7 +485,10 @@ export const useInvoiceLogic = () => {
         overdueOnly: showOverdueOnly,
         paymentClearedOnly: showPaymentClearedOnly,
         sort: sortOrder,
-        customerId: selectedCustomer?._id || "",
+        customerId: selectedCustomerIds.length === 0 ? selectedCustomer?._id || "" : "",
+        customerIds: selectedCustomerIds,
+        pendingOnly: showPendingOnly,
+        cancelledOnly: showCancelledOnly,
       });
 
       let invoicesData = response.data.invoices || [];
@@ -523,6 +542,8 @@ export const useInvoiceLogic = () => {
     isFullPayment, setIsFullPayment,
     banks, setBanks,
     selectedCustomer, setSelectedCustomer,
+    selectedCustomers, setSelectedCustomers,
+    isCustomerPickerOpen, setIsCustomerPickerOpen,
     exportingPDF, setExportingPDF,
     printingInvoices, setPrintingInvoices,
     exportingExcel, setExportingExcel,

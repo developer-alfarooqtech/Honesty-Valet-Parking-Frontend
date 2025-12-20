@@ -7,6 +7,7 @@ import {
   X,
   FileText,
   FileSpreadsheet,
+  Users,
 } from "lucide-react";
 import CustomerSearch from "./CustomerSearch";
 
@@ -14,8 +15,12 @@ const InvoiceFiltersPanel = ({
   searchTerm,
   setSearchTerm,
   selectedCustomer,
+  selectedCustomers = [],
   handleCustomerSelect,
   handleClearCustomer,
+  handleClearAllCustomers,
+  handleRemoveCustomerFilter,
+  openCustomerPicker,
   startDate,
   setStartDate,
   endDate,
@@ -37,12 +42,25 @@ const InvoiceFiltersPanel = ({
   exportingPDF,
   exportingExcel,
 }) => {
-  const hasActiveFilters = startDate || endDate || showOverdueOnly || showPaymentClearedOnly || selectedCustomer;
+  const hasActiveFilters =
+    startDate ||
+    endDate ||
+    showOverdueOnly ||
+    showPaymentClearedOnly ||
+    showPendingOnly ||
+    showCancelledOnly ||
+    selectedCustomer ||
+    (selectedCustomers && selectedCustomers.length > 0);
 
   const getActiveFiltersText = () => {
     const filters = [];
     if (searchTerm) filters.push(`Search: "${searchTerm}"`);
-    if (selectedCustomer) filters.push(`Customer: ${selectedCustomer.name}`);
+    if (selectedCustomers?.length) {
+      const names = selectedCustomers.map((cust) => cust.name).join(", ");
+      filters.push(`Customers: ${names}`);
+    } else if (selectedCustomer) {
+      filters.push(`Customer: ${selectedCustomer.name}`);
+    }
     if (startDate) filters.push(`From: ${new Date(startDate).toLocaleDateString("en-GB")}`);
     if (endDate) filters.push(`To: ${new Date(endDate).toLocaleDateString("en-GB")}`);
     if (showOverdueOnly) filters.push("Overdue Only");
@@ -135,6 +153,30 @@ const InvoiceFiltersPanel = ({
                 selectedCustomer={selectedCustomer}
                 onClearCustomer={handleClearCustomer}
               />
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={openCustomerPicker}
+                  className="inline-flex items-center gap-2 text-sm font-medium text-orange-600 hover:text-orange-700"
+                >
+                  <Users size={16} />
+                  Browse all customers
+                </button>
+                {selectedCustomers?.length > 1 && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    {selectedCustomers.length} customers selected
+                    {handleClearAllCustomers && (
+                      <button
+                        type="button"
+                        onClick={handleClearAllCustomers}
+                        className="ml-2 text-orange-600 hover:text-orange-700"
+                      >
+                        Clear all
+                      </button>
+                    )}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -344,6 +386,7 @@ const InvoiceFiltersPanel = ({
           showPaymentClearedOnly ||
           showPendingOnly ||
           showCancelledOnly ||
+          (selectedCustomers && selectedCustomers.length > 0) ||
           selectedCustomer ||
           searchTerm) && (
           <div className="mt-6 pt-4 border-t border-gray-200">
@@ -369,7 +412,25 @@ const InvoiceFiltersPanel = ({
                   </button>
                 </span>
               )}
-              {selectedCustomer && (
+              {selectedCustomers?.length > 0 ? (
+                selectedCustomers.map((customer) => {
+                  const displayLabel = customer.Code || customer.code || customer.name;
+                  return (
+                  <span
+                    key={customer._id}
+                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200"
+                  >
+                     {displayLabel}
+                    <button
+                      onClick={() => handleRemoveCustomerFilter?.(customer._id)}
+                      className="ml-2 hover:text-blue-800"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                )})
+              ) : (
+                selectedCustomer && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
                   Customer: {selectedCustomer.name}
                   <button
@@ -379,6 +440,7 @@ const InvoiceFiltersPanel = ({
                     <X size={12} />
                   </button>
                 </span>
+                )
               )}
               {startDate && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200">

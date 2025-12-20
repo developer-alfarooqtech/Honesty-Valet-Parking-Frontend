@@ -21,6 +21,8 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     isRepaymentModalOpen, setIsRepaymentModalOpen,
     isFullPayment, setIsFullPayment,
     selectedCustomer, setSelectedCustomer,
+    selectedCustomers, setSelectedCustomers,
+    isCustomerPickerOpen, setIsCustomerPickerOpen,
     selectedCustomerForInvoice, setSelectedCustomerForInvoice,
     selectedProducts, setSelectedProducts,
     selectedServices, setSelectedServices,
@@ -142,10 +144,33 @@ export const useInvoiceHandlers = (invoiceLogic) => {
   // Customer handlers
   const handleCustomerSelect = (customer) => {
     setSelectedCustomer(customer);
+    setSelectedCustomers([]);
     setCurrentPage(1);
   };
 
   const handleClearCustomer = () => {
+    setSelectedCustomer(null);
+    setSelectedCustomers([]);
+    setCurrentPage(1);
+  };
+
+  const openCustomerPicker = () => setIsCustomerPickerOpen(true);
+
+  const closeCustomerPicker = () => setIsCustomerPickerOpen(false);
+
+  const handleApplyCustomerFilters = (customers = []) => {
+    setSelectedCustomers(customers);
+    setSelectedCustomer(null);
+    setCurrentPage(1);
+  };
+
+  const handleRemoveCustomerFilter = (customerId) => {
+    setSelectedCustomers((prev) => prev.filter((customer) => customer._id !== customerId));
+    setCurrentPage(1);
+  };
+
+  const handleClearAllCustomers = () => {
+    setSelectedCustomers([]);
     setSelectedCustomer(null);
     setCurrentPage(1);
   };
@@ -310,6 +335,7 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     setShowPendingOnly(false);
     setShowCancelledOnly(false);
     setSelectedCustomer(null);
+    setSelectedCustomers([]);
     setCurrentPage(1);
     await fetchStats();
   };
@@ -1075,6 +1101,11 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     // Customer handlers
     handleCustomerSelect,
     handleClearCustomer,
+    openCustomerPicker,
+    closeCustomerPicker,
+    handleApplyCustomerFilters,
+    handleRemoveCustomerFilter,
+    handleClearAllCustomers,
     handleCustomerSelectForInvoice,
     
     // Pagination

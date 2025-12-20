@@ -1,5 +1,15 @@
 import api from "./axios-instance";
 
+const appendCustomerIds = (params, customerIds = []) => {
+  if (!Array.isArray(customerIds) || customerIds.length === 0) {
+    return;
+  }
+
+  customerIds
+    .filter((id) => typeof id === "string" && id.trim().length > 0)
+    .forEach((id) => params.append("customerIds", id));
+};
+
 export const fetchAllInvoices = async ({
   currentPage,
   limit,
@@ -12,10 +22,27 @@ export const fetchAllInvoices = async ({
   paymentClearedOnly,
   sort = 'newest',
   customerId = "",
+  customerIds = [],
 }) => {
-  return await api.get(
-    `/get-invoices?page=${currentPage}&limit=${limit}&search=${debouncedSearchTerm}&startDate=${startDate}&endDate=${endDate}&overdueOnly=${overdueOnly}&paymentClearedOnly=${paymentClearedOnly}&pendingOnly=${pendingOnly}&cancelledOnly=${cancelledOnly}&sort=${sort}&customerId=${customerId}`
-  );
+  const params = new URLSearchParams({
+    page: currentPage,
+    limit,
+    search: debouncedSearchTerm || "",
+    startDate: startDate || "",
+    endDate: endDate || "",
+    overdueOnly,
+    paymentClearedOnly,
+    pendingOnly,
+    cancelledOnly,
+    sort,
+  });
+
+  if (customerId) {
+    params.append("customerId", customerId);
+  }
+  appendCustomerIds(params, customerIds);
+
+  return await api.get(`/get-invoices?${params.toString()}`);
 };
 
 export const downloadInvoices = async ({
@@ -24,12 +51,29 @@ export const downloadInvoices = async ({
   endDate,
   overdueOnly,
   paymentClearedOnly,
+  pendingOnly,
+  cancelledOnly,
   sort = 'newest',
   customerId = "",
+  customerIds = [],
 }) => {
-  return await api.get(
-    `/download-invoices?search=${debouncedSearchTerm}&startDate=${startDate}&endDate=${endDate}&overdueOnly=${overdueOnly}&paymentClearedOnly=${paymentClearedOnly}&sort=${sort}&customerId=${customerId}`
-  );
+  const params = new URLSearchParams({
+    search: debouncedSearchTerm || "",
+    startDate: startDate || "",
+    endDate: endDate || "",
+    overdueOnly,
+    paymentClearedOnly,
+    pendingOnly,
+    cancelledOnly,
+    sort,
+  });
+
+  if (customerId) {
+    params.append("customerId", customerId);
+  }
+  appendCustomerIds(params, customerIds);
+
+  return await api.get(`/download-invoices?${params.toString()}`);
 };
 
 export const fetchInvDetails = async (invoiceId) => {
@@ -52,8 +96,16 @@ export const fetchCustomersBySearch = async (searchTerm) => {
   return await api.get(`/customers/search?term=${searchTerm}`);
 };
 
-export const fetchInvoiceStats  = async ({customerId, signal}) => {
-  return await api.get(`/invoice/stats?customerId=${customerId}`, {
+export const fetchInvoiceStats  = async ({customerId, customerIds = [], signal}) => {
+  const params = new URLSearchParams();
+  if (customerId) {
+    params.append("customerId", customerId);
+  }
+  appendCustomerIds(params, customerIds);
+
+  const query = params.toString();
+
+  return await api.get(`/invoice/stats${query ? `?${query}` : ""}`, {
     signal,
     timeout: 30000, // Increase timeout to 30 seconds for stats
   });
