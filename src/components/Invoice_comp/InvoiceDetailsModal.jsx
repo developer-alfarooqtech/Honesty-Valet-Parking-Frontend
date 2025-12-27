@@ -192,9 +192,9 @@ const ItemsList = ({ products = [], services = [], credits = [] }) => {
       ...credit,
       type: 'credit',
       name: credit.title || 'Credit',
-      unitPrice: credit.amount,
+      unitPrice: Math.abs(credit.amount || 0),
       quantity: 'N/A',
-      total: credit.amount ? credit.amount.toFixed(2) : '0.00',
+      total: Math.abs(credit.amount || 0).toFixed(2),
     }))
   ];
 

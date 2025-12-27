@@ -39,7 +39,7 @@ export const printMultipleInvoicesJsPDF = async (invoices, includeSeal = false, 
 
     try {
       // Load logo
-      const logoResponse = await fetch('/hvp_logo.png');
+      const logoResponse = await fetch('/hvp.png');
       const logoBlob = await logoResponse.blob();
       logoImg = await new Promise((resolve) => {
         const reader = new FileReader();
@@ -60,7 +60,7 @@ export const printMultipleInvoicesJsPDF = async (invoices, includeSeal = false, 
 
       // Load signature if needed
       if (includeSignature) {
-        const signResponse = await fetch('/hvp_sign.png');
+        const signResponse = await fetch('/hvp.png');
         const signBlob = await signResponse.blob();
         signImg = await new Promise((resolve) => {
           const reader = new FileReader();
@@ -194,7 +194,18 @@ export const printMultipleInvoicesJsPDF = async (invoices, includeSeal = false, 
       // Items Table
       const products = invoice?.products || [];
       const services = invoice?.services || [];
-      const allItems = [...products, ...services];
+      const credits = invoice?.credits || [];
+      const allItems = [
+        ...products,
+        ...services,
+        ...credits.map(credit => ({
+          quantity: 1,
+          price: -Math.abs(credit.amount || 0),
+          note: credit.title || 'Credit',
+          additionalNote: credit.note || credit.additionalNote,
+          isCredit: true
+        }))
+      ];
       const vatRate = invoice?.vatRate || 5;
 
       const tableData = allItems.map(item => {
@@ -713,7 +724,18 @@ const createSinglePage = (invoice, customer, customerVAT, includeSeal = false, i
 const createMultiplePages = (invoice, customer, customerVAT, maxContentHeight, includeSeal = false, includeSignature = false) => {
   const products = invoice?.products || [];
   const services = invoice?.services || [];
-  const allItems = [...products, ...services];
+  const credits = invoice?.credits || [];
+  const allItems = [
+    ...products,
+    ...services,
+    ...credits.map(credit => ({
+      quantity: 1,
+      price: -Math.abs(credit.amount || 0),
+      note: credit.title || 'Credit',
+      additionalNote: credit.note || credit.additionalNote,
+      isCredit: true
+    }))
+  ];
   const vatRate = invoice?.vatRate || 5;
   
   // Calculate items that can fit up to signature box area
@@ -851,7 +873,7 @@ const createHeader = (invoice, customer) => {
 
   const companyInfo = document.createElement('div');
   const logo = document.createElement('img');
-  logo.src = '/hvp_logo.png';
+  logo.src = '/hvp.png';
   logo.alt = 'Honesty Valet Parking Logo';
   logo.style.cssText = `height: 110px; margin-bottom: 5px; display: block;`;
   logo.onerror = function() {
@@ -998,7 +1020,18 @@ const createTableRows = (items, vatRate = 5) => {
 const createItemsTable = (invoice) => {
   const products = invoice?.products || [];
   const services = invoice?.services || [];
-  const allItems = [...products, ...services];
+  const credits = invoice?.credits || [];
+  const allItems = [
+    ...products,
+    ...services,
+    ...credits.map(credit => ({
+      quantity: 1,
+      price: -Math.abs(credit.amount || 0),
+      note: credit.title || 'Credit',
+      additionalNote: credit.note || credit.additionalNote,
+      isCredit: true
+    }))
+  ];
   if (allItems.length === 0) return null;
 
   const table = document.createElement('table');
@@ -1029,7 +1062,18 @@ const createFooterSection = (invoice, includeSeal = false, includeSignature = fa
   
   const products = invoice?.products || [];
   const services = invoice?.services || [];
-  const allItems = [...products, ...services];
+  const credits = invoice?.credits || [];
+  const allItems = [
+    ...products,
+    ...services,
+    ...credits.map(credit => ({
+      quantity: 1,
+      price: -Math.abs(credit.amount || 0),
+      note: credit.title || 'Credit',
+      additionalNote: credit.note || credit.additionalNote,
+      isCredit: true
+    }))
+  ];
   const vatRate = invoice?.vatRate || 5;
   const totalNetAmount = allItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0);
   const totalVatAmount = totalNetAmount * (vatRate / 100);
