@@ -1,7 +1,7 @@
-import React, { useRef, useEffect, useMemo } from "react";
-import { FileText, Briefcase, Package, Trash2, Plus, X, Copy } from "lucide-react";
+import React, { useRef, useEffect, useMemo, useState } from "react";
+import { FileText, Briefcase, Package, Trash2, Plus, X, Copy, Users } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
-import CustomerSelector from "../SalesOrder_comp/CustomerSelector";
+import SingleCustomerPickerModal from "./SingleCustomerPickerModal";
 import InlineItemSelector from "./InlineItemSelector";
 import BatchSelectionModal from "../SalesOrder_comp/BatchSelectionModal";
 const InvoiceCreationForm = ({
@@ -68,6 +68,9 @@ const InvoiceCreationForm = ({
   const submitButtonRef = useRef(null);
   const dateInputRef = useRef(null);
   const isDuplicateBlocked = Boolean(isDuplicateMode && duplicateGuard && !duplicateGuard.isReady);
+
+  // Customer picker modal state
+  const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
 
   const handleExitDuplicateMode = () => {
     if (exitDuplicateMode) {
@@ -438,10 +441,51 @@ const InvoiceCreationForm = ({
           <span className="ml-2 text-xs text-blue-500 font-normal">(F1)</span>
           <span className="text-red-500 ml-1">*</span>
         </h3>
-        <CustomerSelector
-          onCustomerSelect={handleCustomerSelectForInvoice}
-          selectedCustomer={selectedCustomerForInvoice}
-        />
+        {selectedCustomerForInvoice ? (
+          <div className="flex items-center justify-between p-4 border-2 border-blue-500 rounded-xl bg-blue-50">
+            <div className="flex items-center gap-3">
+              <div className="bg-blue-500/10 p-2 rounded-full">
+                <Users size={20} className="text-blue-600" />
+              </div>
+              <div>
+                <div className="font-semibold text-gray-900 text-lg">{selectedCustomerForInvoice.name}</div>
+                <div className="text-sm text-blue-600">
+                  Code: {selectedCustomerForInvoice.Code} | Email: {selectedCustomerForInvoice.Email}
+                </div>
+                {selectedCustomerForInvoice.address?.address1 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {selectedCustomerForInvoice.address?.address1}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCustomerPickerOpen(true)}
+                className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                Change
+              </button>
+              <button
+                onClick={() => handleCustomerSelectForInvoice(null)}
+                className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded-lg transition-colors"
+                title="Clear selection"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setCustomerPickerOpen(true)}
+            className="w-full px-6 py-4 border-2 border-dashed border-blue-300 rounded-xl text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 flex items-center justify-center gap-3 group"
+          >
+            <Users size={22} className="group-hover:scale-110 transition-transform" />
+            <span className="font-medium text-lg">Browse and Select Customer</span>
+          </button>
+        )}
       </div>
 
       {/* Invoice Date & LPO Section */}
@@ -941,6 +985,14 @@ const InvoiceCreationForm = ({
         }}
         product={selectedProductForBatch}
         onBatchSelect={handleBatchSelect}
+      />
+
+      {/* Customer Picker Modal */}
+      <SingleCustomerPickerModal
+        isOpen={customerPickerOpen}
+        onClose={() => setCustomerPickerOpen(false)}
+        selectedCustomer={selectedCustomerForInvoice}
+        onApply={handleCustomerSelectForInvoice}
       />
     </div>
   );
