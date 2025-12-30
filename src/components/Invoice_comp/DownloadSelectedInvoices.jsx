@@ -29,7 +29,7 @@ export const printMultipleInvoicesJsPDF = async (invoices, includeSeal = false, 
     // A4 dimensions
     const pageWidth = 210;
     const pageHeight = 297;
-    const margin = 10;
+    const margin = 7;
     const contentWidth = pageWidth - (margin * 2);
 
     // Load images if needed
@@ -240,7 +240,7 @@ export const printMultipleInvoicesJsPDF = async (invoices, includeSeal = false, 
         body: tableData,
         theme: 'plain',
         styles: {
-          fontSize: 9.5,
+          fontSize: 10.5,
           cellPadding: 2.5,
           font: 'helvetica',
           fontStyle: 'normal',
@@ -291,15 +291,25 @@ export const printMultipleInvoicesJsPDF = async (invoices, includeSeal = false, 
         // Add signature with aspect ratio maintained, centered in box
         const signBoxWidth = boxWidth / 2 - 2;
         const signBoxHeight = smallBoxHeight;
-        const padding = 2;
+        const padding = .5;
         const maxSignWidth = signBoxWidth - (padding * 2);
         const maxSignHeight = signBoxHeight - (padding * 2);
         
-        // Calculate aspect ratio preserving dimensions
-        const signWidth = 16; // Adjust width as needed
-        const signHeight = maxSignHeight;
+        // Signature aspect ratio: 112 / 122 ≈ 0.918 (width / height)
+        const aspectRatio = 112 / 122;
+        
+        // Scale based on height first (since signature is taller)
+        let signHeight = maxSignHeight;
+        let signWidth = signHeight * aspectRatio;
+        
+        // If width exceeds max, scale down based on width
+        if (signWidth > maxSignWidth) {
+          signWidth = maxSignWidth;
+          signHeight = signWidth / aspectRatio;
+        }
+        
         const signX = margin + (signBoxWidth - signWidth) / 2; // Center horizontally
-        const signY = footerY - 15 + padding;
+        const signY = footerY - 15 + (signBoxHeight - signHeight) / 2; // Center vertically
         
         doc.addImage(signImg, 'PNG', signX, signY, signWidth, signHeight, undefined, 'FAST');
       }
