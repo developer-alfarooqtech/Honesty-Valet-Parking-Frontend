@@ -40,7 +40,7 @@ export const printMultipleInvoicesJsPDF = async (invoices, includeSeal = false, 
     try {
       // Load logo
       const logoResponse = await fetch('/hvp_logo.png');
-      const logoBlob = await logoResponse.blob();
+      const logoBlob = await logoResponse.blob(); 
       logoImg = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result);
@@ -60,7 +60,7 @@ export const printMultipleInvoicesJsPDF = async (invoices, includeSeal = false, 
 
       // Load signature if needed
       if (includeSignature) {
-        const signResponse = await fetch('/hvp_logo.png');
+        const signResponse = await fetch('/hvp_sign.png');
         const signBlob = await signResponse.blob();
         signImg = await new Promise((resolve) => {
           const reader = new FileReader();
