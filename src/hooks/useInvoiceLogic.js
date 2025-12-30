@@ -351,39 +351,106 @@ export const useInvoiceLogic = () => {
       const XLSX = await import("xlsx");
       const workbook = XLSX.utils.book_new();
 
-      // Format data for Excel
-      const worksheetData = invoices.map((inv) => ({
-        "Invoice Number": inv.name || "N/A",
-        "LPO": inv.lpo || "N/A",
-        "Customer Name": inv.salesOrderId?.customer?.name || inv.customer?.name || "N/A",
-        "Invoice Date": formatDate(inv?.date || inv?.createdAt),
-        "Last Updated": formatDate(inv?.updatedAt),
-        "Expiry Date": formatDate(inv?.expDate),
-        "Days Overdue":
-          inv.expDate && isExpired(inv.expDate)
-            ? Math.floor((new Date() - new Date(inv.expDate)) / (1000 * 60 * 60 * 24))
-            : 0,
-        "Net Amount": (inv.netAmount || 0).toFixed(2),
-        "VAT Amount": (inv.vatAmount || 0).toFixed(2),
-        "Discount": (inv.discount || 0).toFixed(2),
-        "Total Amount": (inv.totalAmount || 0).toFixed(2),
-        "Amount Paid": ((inv.totalAmount || 0) - (inv.balanceToReceive || 0)).toFixed(2),
-        "Balance Due": (inv.balanceToReceive || 0).toFixed(2),
-        "Payment Status": inv.isPaymentCleared ? "Fully Paid" : "Pending",
-        "Status":
-          inv.isPaymentCleared
-            ? "Fully Paid"
-            : isExpired(inv.expDate)
-            ? "Overdue"
-            : "Pending",
-        "Description": inv.description || "N/A",
-      }));
+      // Flatten invoices with their products/services into one sheet
+      const worksheetData = [];
+
+      invoices.forEach((inv) => {
+        const baseInfo = {
+          "Invoice Number": inv.name || "N/A",
+          "LPO": inv.lpo || "N/A",
+          "Customer Name": inv.salesOrderId?.customer?.name || inv.customer?.name || "N/A",
+          "Customer Code": inv.salesOrderId?.customer?.Code || inv.customer?.Code || "N/A",
+          "Invoice Date": formatDate(inv?.date || inv?.createdAt),
+          "Last Updated": formatDate(inv?.updatedAt),
+          "Expiry Date": formatDate(inv?.expDate),
+          "Days Overdue":
+            inv.expDate && isExpired(inv.expDate)
+              ? Math.floor((new Date() - new Date(inv.expDate)) / (1000 * 60 * 60 * 24))
+              : 0,
+          "Net Amount": (inv.netAmount || 0).toFixed(2),
+          "VAT Amount": (inv.vatAmount || 0).toFixed(2),
+          "Discount": (inv.discount || 0).toFixed(2),
+          "Total Amount": (inv.totalAmount || 0).toFixed(2),
+          "Amount Paid": ((inv.totalAmount || 0) - (inv.balanceToReceive || 0)).toFixed(2),
+          "Balance Due": (inv.balanceToReceive || 0).toFixed(2),
+          "Payment Status": inv.isPaymentCleared ? "Fully Paid" : "Pending",
+          "Status":
+            inv.isPaymentCleared
+              ? "Fully Paid"
+              : isExpired(inv.expDate)
+              ? "Overdue"
+              : "Pending",
+          "Invoice Description": inv.description || "N/A",
+        };
+
+        const products = inv.products || [];
+        const services = inv.services || [];
+        const credits = inv.credits || [];
+
+        const addRow = (item, type) => {
+          const itemName = item?.product?.name || item?.service?.name || (type === "Credit" ? item.title || "Credit" : "N/A");
+          const itemCode = item?.product?.code || item?.service?.code || "";
+          const noteParts = [item.note, item.additionalNote].filter((n) => n && n.trim());
+
+          worksheetData.push({
+            ...baseInfo,
+            "Item Type": type,
+            "Item Name": itemName || "N/A",
+            "Item Code": itemCode || "N/A",
+            "Quantity": item.quantity || 0,
+            "Unit Price": (item.price || 0).toFixed(2),
+            "Total Price": ((item.quantity || 0) * (item.price || 0)).toFixed(2),
+            "Item Note": noteParts.join(" | ") || "N/A",
+            "Batch ID": item.batchId || "N/A",
+          });
+        };
+
+        if (products.length === 0 && services.length === 0 && credits.length === 0) {
+          worksheetData.push({
+            ...baseInfo,
+            "Item Type": "N/A",
+            "Item Name": "N/A",
+            "Item Code": "N/A",
+            "Quantity": 0,
+            "Unit Price": "0.00",
+            "Total Price": "0.00",
+            "Item Note": "N/A",
+            "Batch ID": "N/A",
+          });
+        } else {
+          products.forEach((p) => addRow(p, "Product"));
+          services.forEach((s) => addRow(s, "Service"));
+          credits.forEach((c) => addRow({ ...c, price: -Math.abs(c.amount || 0), quantity: 1 }, "Credit"));
+        }
+      });
 
       const worksheet = XLSX.utils.json_to_sheet(worksheetData);
       const columnWidths = [
-        { wch: 15 }, { wch: 25 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
-        { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
-        { wch: 12 }, { wch: 12 }, { wch: 30 },
+        { wch: 15 }, // Invoice Number
+        { wch: 12 }, // LPO
+        { wch: 22 }, // Customer Name
+        { wch: 14 }, // Customer Code
+        { wch: 12 }, // Invoice Date
+        { wch: 12 }, // Last Updated
+        { wch: 12 }, // Expiry Date
+        { wch: 12 }, // Days Overdue
+        { wch: 12 }, // Net Amount
+        { wch: 12 }, // VAT Amount
+        { wch: 10 }, // Discount
+        { wch: 12 }, // Total Amount
+        { wch: 12 }, // Amount Paid
+        { wch: 12 }, // Balance Due
+        { wch: 14 }, // Payment Status
+        { wch: 10 }, // Status
+        { wch: 30 }, // Invoice Description
+        { wch: 12 }, // Item Type
+        { wch: 24 }, // Item Name
+        { wch: 14 }, // Item Code
+        { wch: 10 }, // Quantity
+        { wch: 12 }, // Unit Price
+        { wch: 12 }, // Total Price
+        { wch: 22 }, // Item Note
+        { wch: 12 }, // Batch ID
       ];
       worksheet['!cols'] = columnWidths;
 
@@ -404,7 +471,7 @@ export const useInvoiceLogic = () => {
               "Total Price": ((product.quantity || 0) * (product.price || 0)).toFixed(2),
               "Purchase Price": (product.purchasePrice || 0).toFixed(2),
               "Profit": (((product.price || 0) - (product.purchasePrice || 0)) * (product.quantity || 0)).toFixed(2),
-              "Notes": product.note || "N/A",
+              "Product Note": [product.note, product.additionalNote].filter(n => n && n.trim()).join(" | ") || "N/A",
               "Batch ID": product.batchId || "N/A",
             });
           });
@@ -429,7 +496,7 @@ export const useInvoiceLogic = () => {
               "Quantity": service.quantity || 0,
               "Unit Price": (service.price || 0).toFixed(2),
               "Total Price": ((service.quantity || 0) * (service.price || 0)).toFixed(2),
-              "Notes": service.note || "N/A",
+              "Service Note": [service.note, service.additionalNote].filter(n => n && n.trim()).join(" | ") || "N/A",
             });
           });
         }

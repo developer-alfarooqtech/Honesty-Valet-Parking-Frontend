@@ -39,7 +39,7 @@ export const printMultipleInvoicesJsPDF = async (invoices, includeSeal = false, 
 
     try {
       // Load logo
-      const logoResponse = await fetch('/hvp.png');
+      const logoResponse = await fetch('/hvp_logo.png');
       const logoBlob = await logoResponse.blob();
       logoImg = await new Promise((resolve) => {
         const reader = new FileReader();
@@ -60,7 +60,7 @@ export const printMultipleInvoicesJsPDF = async (invoices, includeSeal = false, 
 
       // Load signature if needed
       if (includeSignature) {
-        const signResponse = await fetch('/hvp.png');
+        const signResponse = await fetch('/hvp_logo.png');
         const signBlob = await signResponse.blob();
         signImg = await new Promise((resolve) => {
           const reader = new FileReader();
@@ -206,20 +206,23 @@ export const printMultipleInvoicesJsPDF = async (invoices, includeSeal = false, 
           isCredit: true
         }))
       ];
-      const vatRate = invoice?.vatRate || 5;
+     const vatRate = invoice?.vatRate || 5;
 
       const tableData = allItems.map(item => {
         const netAmount = (item.price || 0) * (item.quantity || 0);
         const vatAmount = netAmount * (vatRate / 100);
         const totalAmount = netAmount + vatAmount;
 
-        const baseDescription = item?.note || item?.service?.name || item?.product?.name || 'N/A';
+        const itemName = item?.service?.name || item?.product?.name || (item.isCredit ? item.note || 'Credit' : '');
+        const note = item?.note;
         const additionalNote = item?.additionalNote?.trim();
-        const descriptionParts = [baseDescription];
-        if (additionalNote) {
-          descriptionParts.push(`${additionalNote}`);
-        }
-        const description = descriptionParts.join('\n');
+        const descriptionParts = [];
+
+        if (itemName) descriptionParts.push(itemName);
+        if (note && note !== itemName) descriptionParts.push(`${note}`);
+        if (additionalNote) descriptionParts.push(`${additionalNote}`);
+
+        const description = descriptionParts.length > 0 ? descriptionParts.join('\n') : 'N/A';
         
         return [
           item.quantity || 0,
@@ -873,7 +876,7 @@ const createHeader = (invoice, customer) => {
 
   const companyInfo = document.createElement('div');
   const logo = document.createElement('img');
-  logo.src = '/hvp.png';
+  logo.src = '/hvp_logo.png';
   logo.alt = 'Honesty Valet Parking Logo';
   logo.style.cssText = `height: 110px; margin-bottom: 5px; display: block;`;
   logo.onerror = function() {
@@ -977,7 +980,8 @@ const createTableRows = (items, vatRate = 5) => {
     const vatAmount = netAmount * (vatRate / 100);
     const totalAmount = netAmount + vatAmount;
 
-    const baseDescription = item?.note || item?.service?.name || item?.product?.name || "N/A";
+    const itemName = item?.service?.name || item?.product?.name || (item.isCredit ? item.note || "Credit" : "");
+    const note = item?.note;
     const additionalNote = item?.additionalNote?.trim();
 
     const quantityCell = row.insertCell();
@@ -987,8 +991,16 @@ const createTableRows = (items, vatRate = 5) => {
     const descriptionCell = row.insertCell();
     descriptionCell.style.cssText = `padding: 5px; text-align: ${aligns[1]}; border: none; font-weight: normal; font-size: 15px;`;
     const mainDescription = document.createElement('div');
-    mainDescription.textContent = baseDescription;
+    mainDescription.textContent = itemName || note || "N/A";
     descriptionCell.appendChild(mainDescription);
+
+    if (note && note !== itemName) {
+      const noteEl = document.createElement('div');
+      noteEl.textContent = `Note: ${note}`;
+      noteEl.style.cssText = 'font-size: 13px; color: #444; margin-top: 2px;';
+      descriptionCell.appendChild(noteEl);
+    }
+
     if (additionalNote) {
       const noteEl = document.createElement('div');
       noteEl.textContent = `Additional Note: ${additionalNote}`;
