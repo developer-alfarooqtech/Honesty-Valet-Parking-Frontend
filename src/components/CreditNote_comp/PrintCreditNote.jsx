@@ -90,11 +90,7 @@ const getDisplayLineItems = (creditNote) => {
       : "Credit amount");
 
   const amount = Number(creditNote?.creditAmount) || 0;
-  const fallbackJc =
-    creditNote?.invoice?.jobCard ||
-    creditNote?.jobCard ||
-    creditNote?.jobCardNumber ||
-    "-";
+ 
   const fallbackVin =
     creditNote?.vehicle?.vin ||
     creditNote?.invoice?.vehicle?.vin ||
@@ -106,7 +102,6 @@ const getDisplayLineItems = (creditNote) => {
       qty: 1,
       description: fallbackDescription,
       vin: fallbackVin,
-      jc: fallbackJc,
       unitPrice: amount,
       total: amount,
     },
@@ -119,9 +114,9 @@ const computeSummaryTotals = (lineItems, creditNote) => {
     creditNote?.discount || creditNote?.discountAmount || creditNote?.discountValue || 0
   );
   const rawVatRate = Number(
-    creditNote?.vatRate ?? creditNote?.taxRate ?? creditNote?.vat_percentage ?? 0
+    creditNote?.vatRate ?? creditNote?.taxRate ?? creditNote?.vat_percentage ?? 5
   );
-  const vatRate = Number.isFinite(rawVatRate) ? rawVatRate : 0;
+  const vatRate = Number.isFinite(rawVatRate) ? rawVatRate : 5;
   const providedVatAmount = Number(creditNote?.vatAmount);
   const vatAmount = Number.isFinite(providedVatAmount)
     ? providedVatAmount
@@ -333,11 +328,10 @@ const renderCreditNotePage = (doc, creditNote, assets = {}, options = {}) => {
   const displayItems = getDisplayLineItems(creditNote);
   autoTable(doc, {
     startY: yPos,
-    head: [["Qty", "Description", "JC", "Unit Price", "Total"]],
+    head: [["Qty", "Description", "Unit Price", "Total"]],
     body: displayItems.map((item) => [
       item.qty || 0,
       item.vin ? `${item.description}\nVIN: ${item.vin}` : item.description,
-      item.jc || "-",
       (item.unitPrice || 0).toFixed(2),
       (item.total || 0).toFixed(2),
     ]),
@@ -359,9 +353,8 @@ const renderCreditNotePage = (doc, creditNote, assets = {}, options = {}) => {
     columnStyles: {
       0: { halign: "center", cellWidth: 15 },
       1: { halign: "left", cellWidth: "auto" },
-      2: { halign: "center", cellWidth: 20 },
+      2: { halign: "center", cellWidth: 25 },
       3: { halign: "right", cellWidth: 25 },
-      4: { halign: "right", cellWidth: 25 },
     },
     margin: { left: margin, right: margin },
   });
@@ -463,7 +456,7 @@ const renderCreditNotePage = (doc, creditNote, assets = {}, options = {}) => {
   const totalsRows = [
     ["Subtotal", formatCurrency(totals.subtotal)],
     [
-      `VAT (${Number.isFinite(totals.vatRate) ? totals.vatRate : 0}%)`,
+      `VAT (${Number.isFinite(totals.vatRate) ? totals.vatRate : 5}%)`,
       formatCurrency(totals.vatAmount),
     ],
     ["Discount", `-${formatCurrency(totals.discount)}`],
