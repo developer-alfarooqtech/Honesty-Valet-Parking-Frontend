@@ -381,11 +381,20 @@ const renderCreditNotePage = (doc, creditNote, assets = {}, options = {}) => {
   drawRoundedRect(doc, margin, pageFooterY - 15, leftSectionWidth / 2 - 2, smallBoxHeight, 2);
   if (includeSignature && assets.sign) {
     const signBoxWidth = leftSectionWidth / 2 - 2;
-    const padding = 1.5;
-    const signWidth = Math.min(16, signBoxWidth - padding * 2);
-    const signHeight = smallBoxHeight - padding * 2;
+    const padding = .5;
+    const maxWidth = signBoxWidth - padding * 2;
+    const maxHeight = smallBoxHeight - padding * 2;
+    const aspectRatio = 112 / 122; // width / height to avoid horizontal stretching
+    let signWidth = maxWidth;
+    let signHeight = signWidth / aspectRatio;
+
+    if (signHeight > maxHeight) {
+      signHeight = maxHeight;
+      signWidth = signHeight * aspectRatio;
+    }
+
     const signX = margin + (signBoxWidth - signWidth) / 2;
-    const signY = pageFooterY - 15 + padding;
+    const signY = pageFooterY - 15 + (maxHeight - signHeight) / 2 + padding;
     doc.addImage(assets.sign, "PNG", signX, signY, signWidth, signHeight, undefined, "FAST");
   }
   drawRoundedRect(

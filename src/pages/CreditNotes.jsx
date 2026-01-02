@@ -70,6 +70,7 @@ const CreditNotes = () => {
   const [independentDescription, setIndependentDescription] = useState("");
   const [independentReference, setIndependentReference] = useState("");
   const [independentProcessImmediately, setIndependentProcessImmediately] = useState(false); // Add this
+  const [independentLineItems, setIndependentLineItems] = useState([]);
   const [editingCreditNote, setEditingCreditNote] = useState(null);
   const [prefillInvoiceLineItems, setPrefillInvoiceLineItems] = useState([]);
   const [invoicePrefillApplied, setInvoicePrefillApplied] = useState(false);
@@ -434,6 +435,34 @@ const CreditNotes = () => {
   const isEditingInvoiceCredit = editingCreditNote?.type === "invoice";
   const isEditingIndependentCredit = editingCreditNote?.type === "independent";
 
+  const hasIndependentLineItems = independentLineItems.length > 0;
+  const independentLineItemsTotal = useMemo(() => {
+    const total = independentLineItems.reduce((sum, item) => {
+      const qty = Number(item.quantity) || 0;
+      const price = Number(item.unitPrice) || 0;
+      if (qty <= 0 || price <= 0) {
+        return sum;
+      }
+      return sum + qty * price;
+    }, 0);
+
+    return parseFloat(total.toFixed(2));
+  }, [independentLineItems]);
+
+  const hasIncompleteIndependentItems = useMemo(() => {
+    if (!hasIndependentLineItems) return false;
+    return independentLineItems.some((item) => {
+      const nameMissing = !item?.name?.trim?.();
+      const qty = Number(item.quantity);
+      const price = Number(item.unitPrice);
+      const qtyInvalid = Number.isNaN(qty) || qty <= 0;
+      const priceInvalid = Number.isNaN(price) || price <= 0;
+      return nameMissing || qtyInvalid || priceInvalid;
+    });
+  }, [hasIndependentLineItems, independentLineItems]);
+
+  const finalIndependentAmount = hasIndependentLineItems ? independentLineItemsTotal : independentAmount;
+
   const handleInvoiceItemToggle = (lineItem) => {
     if (!lineItem) return;
     if (!lineItem.itemId) {
@@ -530,6 +559,34 @@ const CreditNotes = () => {
       return updated;
     });
   };
+
+  const addIndependentLineItem = () => {
+    const newItem = {
+      id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: "",
+      description: "",
+      quantity: 1,
+      unitPrice: ""
+    };
+    setIndependentLineItems((prev) => [...prev, newItem]);
+  };
+
+  const updateIndependentLineItem = (id, field, value) => {
+    setIndependentLineItems((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              [field]: value
+            }
+          : item
+      )
+    );
+  };
+
+  const removeIndependentLineItem = (id) => {
+    setIndependentLineItems((prev) => prev.filter((item) => item.id !== id));
+  };
   
   const handleCreditNoteSelect = (creditNote) => {
     setSelectedCreditNote(creditNote);
@@ -556,6 +613,7 @@ const CreditNotes = () => {
       setProcessImmediately(creditNote.status === "processed");
       setPrefillInvoiceLineItems(creditNote.items || creditNote.lineItems || []);
       setInvoicePrefillApplied(false);
+      setIndependentLineItems([]);
     } else {
       setView("create-independent");
       setIndependentCustomer(creditNote.customer || null);
@@ -564,6 +622,27 @@ const CreditNotes = () => {
       setIndependentDescription(creditNote.description || "");
       setIndependentReference(creditNote.reference || "");
       setIndependentProcessImmediately(creditNote.status === "processed");
+      setIndependentLineItems(
+        Array.isArray(creditNote.items)
+          ? creditNote.items.map((item, index) => ({
+              id:
+                item?.itemId?.toString?.() ||
+                item?.sourceInvoiceItemId?.toString?.() ||
+                `manual-${index}`,
+              name: item?.name || "",
+              description: item?.description || "",
+              quantity: typeof item?.quantity === "number" ? item.quantity : item?.creditedQuantity || 1,
+              unitPrice:
+                typeof item?.unitPrice === "number"
+                  ? item.unitPrice
+                  : typeof item?.price === "number"
+                  ? item.price
+                  : item?.lineTotal && item?.quantity
+                  ? parseFloat((item.lineTotal / item.quantity).toFixed(2))
+                  : ""
+            }))
+          : []
+      );
     }
   };
 
@@ -778,24 +857,67 @@ const CreditNotes = () => {
       return;
     }
     
-    if (!independentAmount || independentAmount <= 0) {
+    if (hasIncompleteIndependentItems) {
+      setError("Please complete all line items with name, quantity, and unit price greater than 0");
+      toast.error("Please complete all line items with name, quantity, and unit price greater than 0");
+      return;
+    }
+
+    const resolvedIndependentAmount = hasIndependentLineItems
+      ? independentLineItemsTotal
+      : parseFloat(independentAmount);
+
+    if (!resolvedIndependentAmount || resolvedIndependentAmount <= 0) {
       setError("Please enter a valid credit amount");
       toast.error("Please enter a valid credit amount");
       return;
     }
     
-  
     
     setLoading(true);
     try {
       const creditNoteData = {
         customerId: independentCustomer._id,
-        creditAmount: parseFloat(independentAmount),
+        creditAmount: parseFloat(resolvedIndependentAmount.toFixed(2)),
         description: independentDescription.trim(),
         reference: independentReference.trim(),
         date: independentDate,
         processImmediately: independentProcessImmediately
       };
+
+      if (hasIndependentLineItems) {
+        const sanitizedLineItems = independentLineItems.map((item, index) => {
+          const name = (item?.name || "").trim();
+          const qty = Number(item.quantity);
+          const unitPrice = Number(item.unitPrice);
+
+          if (!name) {
+            throw new Error(`Line item ${index + 1} is missing a name`);
+          }
+
+          if (Number.isNaN(qty) || qty <= 0) {
+            throw new Error(`Line item ${index + 1} must have a quantity greater than 0`);
+          }
+
+          if (Number.isNaN(unitPrice) || unitPrice <= 0) {
+            throw new Error(`Line item ${index + 1} must have a unit price greater than 0`);
+          }
+
+          return {
+            itemType: "manual",
+            name,
+            description: (item?.description || "").trim(),
+            quantity: parseFloat(qty.toFixed(3)),
+            unitPrice: parseFloat(unitPrice.toFixed(2))
+          };
+        });
+
+        if (!sanitizedLineItems.length) {
+          throw new Error("At least one valid line item is required");
+        }
+
+        creditNoteData.lineItems = sanitizedLineItems;
+      }
 
       const response = isEditingIndependentCredit
         ? await updateCreditNote(editingCreditNote._id, creditNoteData)
@@ -851,6 +973,7 @@ const CreditNotes = () => {
     setIndependentDescription("");
     setIndependentReference("");
     setIndependentProcessImmediately(false); // Add this
+    setIndependentLineItems([]);
     setError("");
     if (editingCreditNote?.type === "independent") {
       setEditingCreditNote(null);
@@ -1810,6 +1933,133 @@ const CreditNotes = () => {
                 </div>
               </div>
 
+              {/* Manual Line Items */}
+              <div className="border border-slate-200 rounded-xl bg-gradient-to-b from-slate-50 to-white">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-slate-200">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800">Line items (manual)</p>
+                    <p className="text-xs text-slate-500">Add individual rows to auto-calculate the credit amount.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    {hasIndependentLineItems && (
+                      <button
+                        type="button"
+                        onClick={() => setIndependentLineItems([])}
+                        className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 border border-slate-200 rounded-lg hover:bg-slate-200 transition-colors"
+                      >
+                        Clear all
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={addIndependentLineItem}
+                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-gradient-to-r from-slate-600 to-slate-700 rounded-lg shadow-sm hover:from-slate-700 hover:to-slate-800"
+                    >
+                      <Plus size={16} className="mr-1" />
+                      Add item
+                    </button>
+                  </div>
+                </div>
+
+                {independentLineItems.length === 0 ? (
+                  <div className="p-4 text-sm text-slate-600">
+                    No line items added yet. Add rows to capture descriptions, quantities, and unit prices.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm divide-y divide-slate-200">
+                      <thead className="bg-slate-100 text-slate-700">
+                        <tr>
+                          <th className="px-4 py-2 text-left font-semibold">Name</th>
+                          <th className="px-4 py-2 text-left font-semibold">Description</th>
+                          <th className="px-4 py-2 text-right font-semibold">Qty</th>
+                          <th className="px-4 py-2 text-right font-semibold">Unit Price</th>
+                          <th className="px-4 py-2 text-right font-semibold">Line Total</th>
+                          <th className="px-4 py-2 text-center font-semibold">Remove</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {independentLineItems.map((item) => {
+                          const qtyNumber = Number(item.quantity) || 0;
+                          const priceNumber = Number(item.unitPrice) || 0;
+                          const lineTotal = qtyNumber > 0 && priceNumber > 0 ? qtyNumber * priceNumber : 0;
+
+                          return (
+                            <tr key={item.id}>
+                              <td className="px-4 py-3 align-top">
+                                <input
+                                  type="text"
+                                  value={item.name}
+                                  onChange={(e) => updateIndependentLineItem(item.id, "name", e.target.value)}
+                                  placeholder="Item name"
+                                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-sm"
+                                />
+                              </td>
+                              <td className="px-4 py-3 align-top">
+                                <textarea
+                                  value={item.description}
+                                  onChange={(e) => updateIndependentLineItem(item.id, "description", e.target.value)}
+                                  rows={2}
+                                  placeholder="Optional details"
+                                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-sm resize-none"
+                                />
+                              </td>
+                              <td className="px-4 py-3 align-top text-right">
+                                <input
+                                  type="number"
+                                  min="0.01"
+                                  step="0.01"
+                                  value={item.quantity}
+                                  onChange={(e) => updateIndependentLineItem(item.id, "quantity", e.target.value)}
+                                  className="w-24 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-sm text-right"
+                                />
+                              </td>
+                              <td className="px-4 py-3 align-top text-right">
+                                <input
+                                  type="number"
+                                  min="0.01"
+                                  step="0.01"
+                                  value={item.unitPrice}
+                                  onChange={(e) => updateIndependentLineItem(item.id, "unitPrice", e.target.value)}
+                                  className="w-28 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-sm text-right"
+                                  placeholder="0.00"
+                                />
+                              </td>
+                              <td className="px-4 py-3 align-top text-right font-semibold text-slate-700">
+                                {formatCurrency(lineTotal)}
+                              </td>
+                              <td className="px-4 py-3 align-top text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => removeIndependentLineItem(item.id)}
+                                  className="inline-flex items-center justify-center p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200"
+                                  aria-label="Remove line item"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {hasIndependentLineItems && (
+                  <div className="px-4 py-3 border-t border-slate-200 bg-slate-50 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                      <p className="text-xs uppercase text-slate-500 tracking-wide">Items</p>
+                      <p className="text-xl font-bold text-slate-800">{independentLineItems.length}</p>
+                    </div>
+                    <div className="p-3 bg-white border border-slate-200 rounded-lg md:col-span-2">
+                      <p className="text-xs uppercase text-slate-500 tracking-wide">Auto calculated credit</p>
+                      <p className="text-2xl font-bold text-slate-800">{formatCurrency(independentLineItemsTotal)}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Credit Amount, Date, and Reference */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
@@ -1820,11 +2070,17 @@ const CreditNotes = () => {
                     type="number"
                     min="0"
                     step="0.01"
-                    value={independentAmount}
+                    value={finalIndependentAmount}
                     onChange={(e) => setIndependentAmount(parseFloat(e.target.value) || 0)}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-gray-700"
+                    readOnly={hasIndependentLineItems}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-gray-700 ${
+                      hasIndependentLineItems ? "bg-slate-100 cursor-not-allowed" : "bg-gray-50"
+                    }`}
                     placeholder="0.00"
                   />
+                  {hasIndependentLineItems && (
+                    <p className="text-xs text-slate-500 mt-1">Amount is auto-calculated from the line items.</p>
+                  )}
                 </div>
 
                 <div>
@@ -1902,9 +2158,14 @@ const CreditNotes = () => {
                 <button
                   type="button"
                   onClick={handleCreateIndependentCreditNote}
-                  disabled={loading || !independentCustomer || !independentAmount}
+                  disabled={
+                    loading ||
+                    !independentCustomer ||
+                    finalIndependentAmount <= 0 ||
+                    hasIncompleteIndependentItems
+                  }
                   className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
-                    loading || !independentCustomer || !independentAmount 
+                    loading || !independentCustomer || finalIndependentAmount <= 0 || hasIncompleteIndependentItems
                       ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                       : "bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white shadow-lg"
                   }`}
