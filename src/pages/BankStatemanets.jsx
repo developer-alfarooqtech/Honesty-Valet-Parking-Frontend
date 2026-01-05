@@ -175,6 +175,8 @@ const BankStatements = () => {
         Reference: item.referenceName || "N/A",
         Account: item.bankAccountName || "N/A",
         "Created By": item?.createdBy?.name || item?.createdBy?.loginId || "N/A",
+          Description: item.description || "-",
+        Invoices: formatInvoiceList(item),
         Amount: item.amount,
       }));
 
@@ -256,7 +258,20 @@ const BankStatements = () => {
     const safeValue = Number.isFinite(numericValue) ? numericValue : 0;
     return `AED ${safeValue.toFixed(2)}`;
   };
-
+const formatInvoiceList = (transaction) => {
+    if (!transaction) return "-";
+    if (Array.isArray(transaction.groupInvoiceDetails) && transaction.groupInvoiceDetails.length) {
+      return transaction.groupInvoiceDetails
+        .map((inv) => inv?.name || inv?._id || "Invoice")
+        .join(", ");
+    }
+    if (Array.isArray(transaction.groupInvoices) && transaction.groupInvoices.length) {
+      return transaction.groupInvoices.join(", ");
+    }
+    if (transaction.referenceName) return transaction.referenceName;
+    return "-";
+  };
+  
   const openGroupInvoicesModal = (transaction) => {
     if (!transaction) return;
 
