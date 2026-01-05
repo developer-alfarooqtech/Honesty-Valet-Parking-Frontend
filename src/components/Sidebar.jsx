@@ -74,7 +74,7 @@ const Sidebar = () => {
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-white/20">
               {!collapsed && (
-                <h2 className="text-xl font-bold text-blue-500">Honesty & Perfection</h2>
+                <h2 className="text-xl font-bold text-blue-500">Honesty & Perfection Valet Parking Services</h2>
               )}
               <button
                 onClick={() => setCollapsed(!collapsed)}

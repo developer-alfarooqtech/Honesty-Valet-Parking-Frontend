@@ -75,7 +75,7 @@ const LoginPage = () => {
             <LogIn className="h-12 w-12 text-blue-600" />
           </div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-amber-600 bg-clip-text text-transparent mb-2">
-            HONESTY & PERFECTION
+           Honesty & Perfection Valet Parking Services
           </h1>
           <p className="text-gray-600 text-lg">Access Terminal</p>
           <div className="w-20 h-1 bg-gradient-to-r from-blue-500 to-amber-500 mx-auto mt-4 rounded-full shadow-sm"></div>
