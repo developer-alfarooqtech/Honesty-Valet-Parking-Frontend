@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Search, X, DollarSign, Download } from "lucide-react";
 import useDebounce from "../hooks/useDebounce";
-import Pagination from "../components/Pagination";
 import CustomerSearch from "../components/PendingPayments_comp/CustomerSearch";
 import PaymentModal from "../components/PendingPayments_comp/PaymentModal";
 import {
@@ -15,9 +14,11 @@ import { exportPendingPaymentsToExcel } from "../utils/pendingPaymentsExport";
 const PendingPayments = () => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
 
   // Filters
   const [filters, setFilters] = useState({
@@ -56,20 +57,26 @@ const PendingPayments = () => {
   const [addingBalance, setAddingBalance] = useState(false);
 
   // Fetch invoices
-  const fetchInvoices = async (page = 1) => {
+  const fetchInvoices = async (page = 1, append = false) => {
     if (!filters.customer) {
       setInvoices([]);
       setTotalPages(1);
       setTotalCount(0);
       setCurrentPage(1);
       setLoading(false);
+      setLoadingMore(false);
+      setHasMore(false);
       return;
     }
-    setLoading(true);
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const queryParams = new URLSearchParams({
         page: page.toString(),
-        limit: "10",
+        limit: "20",
         sortField: sort.field,
         sortDirection: sort.direction,
         ...(filters.customer && { customer: filters.customer._id }),
@@ -82,16 +89,44 @@ const PendingPayments = () => {
       const data = await response.data;
 
       if (data.success) {
-        setInvoices(data.invoices);
+        setInvoices((prev) => (append ? [...prev, ...data.invoices] : data.invoices));
         setTotalPages(data.totalPages);
         setTotalCount(data.totalCount);
         setCurrentPage(data.currentPage);
+        setHasMore(data.currentPage < data.totalPages);
+
+        if (append && selectAll) {
+          setSelectedInvoices((prevSelected) => {
+            const updated = { ...prevSelected };
+            data.invoices.forEach((invoice) => {
+              updated[invoice._id] = invoice;
+            });
+            return updated;
+          });
+
+          setPaymentData((prevPayments) => {
+            const updated = { ...prevPayments };
+            data.invoices.forEach((invoice) => {
+              if (!updated[invoice._id]) {
+                const originalDiscount = invoice.discount || 0;
+                updated[invoice._id] = {
+                  originalDiscount,
+                  discount: originalDiscount,
+                  amount: invoice.balanceToReceive,
+                  description: "",
+                };
+              }
+            });
+            return updated;
+          });
+        }
       }
     } catch (error) {
       console.error("Error fetching invoices:", error);
       toast.error(error?.response?.data?.message || "Error fetching invoices:");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -101,10 +136,17 @@ const PendingPayments = () => {
       setTotalPages(1);
       setTotalCount(0);
       setCurrentPage(1);
+      setSelectedInvoices({});
+      setPaymentData({});
+      setSelectAll(false);
+      setHasMore(false);
       return;
     }
 
-    fetchInvoices(1);
+    setSelectedInvoices({});
+    setPaymentData({});
+    setSelectAll(false);
+    fetchInvoices(1, false);
     setCurrentPage(1);
   }, [
     filters.customer,
@@ -115,11 +157,9 @@ const PendingPayments = () => {
   ]);
 
   // Handle page change
-  const handlePageChange = (page) => {
-    if (!filters.customer) {
-      return;
-    }
-    fetchInvoices(page);
+  const handleLoadMore = () => {
+    if (!filters.customer || loadingMore || !hasMore) return;
+    fetchInvoices(currentPage + 1, true);
   };
 
   // Handle customer selection
@@ -395,7 +435,8 @@ const PendingPayments = () => {
       }));
     }
 
-    fetchInvoices(currentPage);
+    fetchInvoices(1, false);
+    setCurrentPage(1);
   };
 
   // Calculate totals for selected invoices with valid payment data
@@ -768,15 +809,20 @@ const PendingPayments = () => {
               </table>
             </div>
 
-            {/* Pagination */}
+            {/* Load more */}
             {totalPages > 1 && (
-              <div className="px-4 py-3 border-t border-gray-200">
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={handlePageChange}
-                  className="justify-center"
-                />
+              <div className="px-4 py-3 border-t border-gray-200 flex justify-center">
+                {hasMore ? (
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors disabled:opacity-60"
+                  >
+                    {loadingMore ? "Loading..." : "Load more"}
+                  </button>
+                ) : (
+                  <p className="text-sm text-gray-500">All invoices loaded</p>
+                )}
               </div>
             )}
           </>

@@ -1544,16 +1544,16 @@ const CreditNotes = () => {
           </>
         ) : view === "create-invoice" ? (
           // Create Invoice-Based Credit Note Form
-          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 p-8">
+          <div className="bg-white rounded-xl shadow-2xl border border-blue-200 p-8">
             <div className="flex items-center mb-8">
-              <div className="bg-gradient-to-r from-slate-500 to-slate-600 p-3 rounded-lg mr-4">
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-3 rounded-lg mr-4">
                 <FileText size={24} className="text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-slate-800">
+                <h2 className="text-2xl font-bold text-blue-800">
                   {isEditingInvoiceCredit ? "Update Credit Note" : "Create Credit Note Against Invoice"}
                 </h2>
-                <p className="text-slate-600 text-sm">
+                <p className="text-blue-600 text-sm">
                   {isEditingInvoiceCredit
                     ? "Modify the invoice items and details for this credit note"
                     : "Issue a credit note for a specific customer invoice"}
@@ -1586,28 +1586,28 @@ const CreditNotes = () => {
               />
 
               {/* Invoice line item selection */}
-              <div className="border border-slate-200 rounded-xl p-5 bg-gradient-to-b from-slate-50 to-white">
+              <div className="border border-blue-200 rounded-xl p-5 bg-gradient-to-b from-blue-50 to-white">
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-4">
                   <div>
-                    <p className="text-sm font-semibold text-slate-700">Invoice line items</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-sm font-semibold text-blue-700">Invoice line items</p>
+                    <p className="text-xs text-blue-500">
                       Select which rows from the invoice should be credited. The credit amount will update automatically.
                     </p>
                   </div>
                   {selectedInvoice && (
-                    <div className="text-xs text-slate-500">
-                      Invoice total: <span className="font-semibold text-slate-700">{formatCurrency(selectedInvoice.totalAmount || invoiceDetails?.totalAmount || 0)}</span>
+                    <div className="text-xs text-blue-500">
+                      Invoice total: <span className="font-semibold text-blue-700">{formatCurrency(selectedInvoice.totalAmount || invoiceDetails?.totalAmount || 0)}</span>
                     </div>
                   )}
                 </div>
 
                 {!selectedInvoice ? (
-                  <div className="p-4 bg-white border border-dashed border-slate-200 rounded-lg text-slate-500 text-sm text-center">
+                  <div className="p-4 bg-white border border-dashed border-blue-200 rounded-lg text-blue-500 text-sm text-center">
                     Select an invoice to view its products, services, and credits.
                   </div>
                 ) : invoiceItemsLoading ? (
-                  <div className="p-6 flex items-center justify-center text-slate-600">
-                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-slate-500 border-t-transparent mr-3"></div>
+                  <div className="p-6 flex items-center justify-center text-blue-600">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent mr-3"></div>
                     Loading invoice items...
                   </div>
                 ) : invoiceItemsError ? (
@@ -1621,31 +1621,31 @@ const CreditNotes = () => {
                 ) : (
                   <div className="space-y-6">
                     {invoiceLineItemGroups.map((group) => (
-                      <div key={group.key} className="bg-white border border-slate-200 rounded-lg shadow-sm">
-                        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                          <div className="font-semibold text-slate-700">{group.label}</div>
-                          <span className="text-xs text-slate-500">{group.items.length} items</span>
+                      <div key={group.key} className="bg-white border border-blue-200 rounded-lg shadow-sm">
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-blue-100">
+                          <div className="font-semibold text-blue-700">{group.label}</div>
+                          <span className="text-xs text-blue-500">{group.items.length} items</span>
                         </div>
 
                         <div className="overflow-x-auto">
-                          <table className="min-w-full divide-y divide-slate-100 text-sm">
-                            <thead className="bg-slate-50 text-slate-600 font-medium">
+                          <table className="min-w-full divide-y divide-blue-100 text-sm">
+                            <thead className="bg-blue-50 text-blue-600 font-medium">
                               <tr>
                                 <th className="px-4 py-2 text-left">Select</th>
                                 <th className="px-4 py-2 text-left">Item</th>
                                 <th className="px-4 py-2 text-center">Invoice Qty</th>
                                 <th className="px-4 py-2 text-right">
                                   <div>Unit Price</div>
-                                  <div className="text-[10px] text-slate-400 font-normal">Invoice / Credit</div>
+                                  <div className="text-[10px] text-blue-400 font-normal">Invoice / Credit</div>
                                 </th>
                                 <th className="px-4 py-2 text-right">
                                   <div>Line Total</div>
-                                  <div className="text-[10px] text-slate-400 font-normal">Invoice / Credit</div>
+                                  <div className="text-[10px] text-blue-400 font-normal">Invoice / Credit</div>
                                 </th>
                                 <th className="px-4 py-2 text-right">Credit Qty</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-blue-100">
                               {group.items.map((item) => {
                                 const selectedEntry = selectedInvoiceItems[item.key];
                                 const isSelected = Boolean(selectedEntry);
@@ -1661,23 +1661,23 @@ const CreditNotes = () => {
                                     <td className="px-4 py-3">
                                       <input
                                         type="checkbox"
-                                        className="rounded border-slate-300 text-slate-600 focus:ring-slate-500"
+                                        className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
                                         checked={isSelected}
                                         onChange={() => handleInvoiceItemToggle(item)}
                                       />
                                     </td>
                                     <td className="px-4 py-3">
-                                      <div className="font-medium text-slate-800">{item.name}</div>
+                                      <div className="font-medium text-blue-800">{item.name}</div>
                                       {item.description && (
-                                        <div className="text-xs text-slate-500 mt-0.5">{item.description}</div>
+                                        <div className="text-xs text-blue-500 mt-0.5">{item.description}</div>
                                       )}
                                       {item.code && (
-                                        <div className="text-xs text-slate-400 mt-0.5">Code: {item.code}</div>
+                                        <div className="text-xs text-blue-400 mt-0.5">Code: {item.code}</div>
                                       )}
                                     </td>
-                                    <td className="px-4 py-3 text-center text-slate-600">{item.quantity}</td>
-                                    <td className="px-4 py-3 text-right text-slate-600">
-                                      <div className="text-xs text-slate-400 mb-1">
+                                    <td className="px-4 py-3 text-center text-blue-600">{item.quantity}</td>
+                                    <td className="px-4 py-3 text-right text-blue-600">
+                                      <div className="text-xs text-blue-400 mb-1">
                                         Invoice: {formatCurrency(item.unitPrice)}
                                       </div>
                                       <input
@@ -1688,22 +1688,22 @@ const CreditNotes = () => {
                                         onChange={(e) => handleInvoiceItemPriceChange(item.key, e.target.value)}
                                         disabled={!isSelected}
                                         placeholder={defaultUnitPrice}
-                                        className={`w-28 px-2 py-1 text-right border rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-sm ${
+                                        className={`w-28 px-2 py-1 text-right border rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-sm ${
                                             isSelected
-                                              ? "bg-white border-slate-300"
-                                              : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                                              ? "bg-white border-blue-300"
+                                              : "bg-blue-100 border-blue-200 text-blue-400 cursor-not-allowed"
                                           }`}
                                       />
                                     </td>
                                     <td className="px-4 py-3 text-right">
-                                      <div className="text-xs text-slate-400">Invoice: {formatCurrency(item.total)}</div>
-                                      <div className={`text-sm font-semibold ${isSelected ? "text-slate-800" : "text-slate-400"}`}>
+                                      <div className="text-xs text-blue-400">Invoice: {formatCurrency(item.total)}</div>
+                                      <div className={`text-sm font-semibold ${isSelected ? "text-blue-800" : "text-blue-400"}`}>
                                         {formatCurrency(creditLineTotal)}
                                       </div>
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                       {item.itemType === "credit" ? (
-                                        <span className="text-xs text-slate-500">Full amount</span>
+                                        <span className="text-xs text-blue-500">Full amount</span>
                                       ) : (
                                         <input
                                           type="number"
@@ -1713,8 +1713,8 @@ const CreditNotes = () => {
                                           value={isSelected ? selectedQty : ""}
                                           onChange={(e) => handleInvoiceItemQuantityChange(item.key, e.target.value)}
                                           disabled={!isSelected}
-                                          className={`w-24 px-2 py-1 text-right border rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-sm ${
-                                            isSelected ? "bg-white border-slate-300" : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                                          className={`w-24 px-2 py-1 text-right border rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-sm ${
+                                            isSelected ? "bg-white border-blue-300" : "bg-blue-100 border-blue-200 text-blue-400 cursor-not-allowed"
                                           }`}
                                           placeholder={item.quantity}
                                         />
@@ -1733,11 +1733,11 @@ const CreditNotes = () => {
 
                 {selectedInvoice && (
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-white border border-slate-200 rounded-lg">
-                      <p className="text-xs uppercase text-slate-500 tracking-wide">Selected items</p>
-                      <p className="text-2xl font-bold text-slate-700">{selectedInvoiceItemsArray.length}</p>
+                    <div className="p-4 bg-white border border-blue-200 rounded-lg">
+                      <p className="text-xs uppercase text-blue-500 tracking-wide">Selected items</p>
+                      <p className="text-2xl font-bold text-blue-700">{selectedInvoiceItemsArray.length}</p>
                     </div>
-                    <div className="p-4 bg-gradient-to-r from-slate-600 to-slate-700 rounded-lg text-white">
+                    <div className="p-4 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg text-white">
                       <p className="text-xs uppercase tracking-wide text-white/70">Auto calculated credit</p>
                       <p className="text-2xl font-bold">{formatCurrency(computedCreditAmount)}</p>
                     </div>
@@ -1759,18 +1759,18 @@ const CreditNotes = () => {
                       value={finalCreditAmount}
                       onChange={(e) => setCreditAmount(parseFloat(e.target.value) || 0)}
                       readOnly={hasInvoiceItemSelection}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-gray-700 ${
-                        hasInvoiceItemSelection ? "bg-slate-100 cursor-not-allowed" : "bg-gray-50"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-700 ${
+                        hasInvoiceItemSelection ? "bg-blue-100 cursor-not-allowed" : "bg-gray-50"
                       }`}
                       placeholder="0.00"
                     />
                     {hasInvoiceItemSelection && (
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">
+                      <span className="absolute right-4 top-1/2 -tranblue-y-1/2 text-xs font-semibold text-blue-500">
                         Auto
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-blue-500 mt-1">
                     {hasInvoiceItemSelection
                       ? "Amount is calculated from the selected invoice items."
                       : "Enter an amount if you are not selecting specific line items."}
@@ -1785,7 +1785,7 @@ const CreditNotes = () => {
                     type="date"
                     value={creditDate}
                     onChange={(e) => setCreditDate(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-gray-700"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-700"
                   />
                 </div>
               </div>
@@ -1801,7 +1801,7 @@ const CreditNotes = () => {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-gray-700 resize-none"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-700 resize-none"
                   placeholder="Enter additional details about the credit note..."
                 />
               </div>
@@ -1813,7 +1813,7 @@ const CreditNotes = () => {
                   id="processImmediately"
                   checked={processImmediately}
                   onChange={(e) => setProcessImmediately(e.target.checked)}
-                  className="rounded border-gray-300 text-slate-600 focus:ring-slate-500"
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <label htmlFor="processImmediately" className="text-sm text-gray-700 cursor-pointer">
                   <span className="font-medium">Process immediately</span>
@@ -1848,7 +1848,7 @@ const CreditNotes = () => {
                   className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
                     loading || !selectedInvoice || finalCreditAmount <= 0 || invoiceItemsLoading
                       ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                      : "bg-gradient-to-r from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700 text-white shadow-lg"
+                      : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg"
                   }`}
                 >
                   {loading ? (
@@ -1871,16 +1871,16 @@ const CreditNotes = () => {
           </div>
         ) : (
           // Create Independent Credit Note Form
-          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 p-8">
+          <div className="bg-white rounded-xl shadow-2xl border border-blue-200 p-8">
             <div className="flex items-center mb-8">
-              <div className="bg-gradient-to-r from-slate-600 to-slate-700 p-3 rounded-lg mr-4">
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-3 rounded-lg mr-4">
                 <Building2 size={24} className="text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-slate-800">
+                <h2 className="text-2xl font-bold text-blue-800">
                   {isEditingIndependentCredit ? "Update Independent Credit Note" : "Create Independent Credit Note"}
                 </h2>
-                <p className="text-slate-600 text-sm">
+                <p className="text-blue-600 text-sm">
                   {isEditingIndependentCredit
                     ? "Edit the standalone credit details for this customer"
                     : "Issue a standalone credit note for a customer"}
@@ -1934,18 +1934,18 @@ const CreditNotes = () => {
               </div>
 
               {/* Manual Line Items */}
-              <div className="border border-slate-200 rounded-xl bg-gradient-to-b from-slate-50 to-white">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-slate-200">
+              <div className="border border-blue-200 rounded-xl bg-gradient-to-b from-blue-50 to-white">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-blue-200">
                   <div>
-                    <p className="text-sm font-semibold text-slate-800">Line items (manual)</p>
-                    <p className="text-xs text-slate-500">Add individual rows to auto-calculate the credit amount.</p>
+                    <p className="text-sm font-semibold text-blue-800">Line items (manual)</p>
+                    <p className="text-xs text-blue-500">Add individual rows to auto-calculate the credit amount.</p>
                   </div>
                   <div className="flex gap-2">
                     {hasIndependentLineItems && (
                       <button
                         type="button"
                         onClick={() => setIndependentLineItems([])}
-                        className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 border border-slate-200 rounded-lg hover:bg-slate-200 transition-colors"
+                        className="px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-100 border border-blue-200 rounded-lg hover:bg-blue-200 transition-colors"
                       >
                         Clear all
                       </button>
@@ -1953,7 +1953,7 @@ const CreditNotes = () => {
                     <button
                       type="button"
                       onClick={addIndependentLineItem}
-                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-gradient-to-r from-slate-600 to-slate-700 rounded-lg shadow-sm hover:from-slate-700 hover:to-slate-800"
+                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-sm hover:from-blue-700 hover:to-blue-800"
                     >
                       <Plus size={16} className="mr-1" />
                       Add item
@@ -1962,13 +1962,13 @@ const CreditNotes = () => {
                 </div>
 
                 {independentLineItems.length === 0 ? (
-                  <div className="p-4 text-sm text-slate-600">
+                  <div className="p-4 text-sm text-blue-600">
                     No line items added yet. Add rows to capture descriptions, quantities, and unit prices.
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm divide-y divide-slate-200">
-                      <thead className="bg-slate-100 text-slate-700">
+                    <table className="min-w-full text-sm divide-y divide-blue-200">
+                      <thead className="bg-blue-100 text-blue-700">
                         <tr>
                           <th className="px-4 py-2 text-left font-semibold">Name</th>
                           <th className="px-4 py-2 text-left font-semibold">Description</th>
@@ -1978,7 +1978,7 @@ const CreditNotes = () => {
                           <th className="px-4 py-2 text-center font-semibold">Remove</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
+                      <tbody className="divide-y divide-blue-100 bg-white">
                         {independentLineItems.map((item) => {
                           const qtyNumber = Number(item.quantity) || 0;
                           const priceNumber = Number(item.unitPrice) || 0;
@@ -1992,7 +1992,7 @@ const CreditNotes = () => {
                                   value={item.name}
                                   onChange={(e) => updateIndependentLineItem(item.id, "name", e.target.value)}
                                   placeholder="Item name"
-                                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-sm"
+                                  className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-sm"
                                 />
                               </td>
                               <td className="px-4 py-3 align-top">
@@ -2001,7 +2001,7 @@ const CreditNotes = () => {
                                   onChange={(e) => updateIndependentLineItem(item.id, "description", e.target.value)}
                                   rows={2}
                                   placeholder="Optional details"
-                                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-sm resize-none"
+                                  className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-sm resize-none"
                                 />
                               </td>
                               <td className="px-4 py-3 align-top text-right">
@@ -2011,7 +2011,7 @@ const CreditNotes = () => {
                                   step="0.01"
                                   value={item.quantity}
                                   onChange={(e) => updateIndependentLineItem(item.id, "quantity", e.target.value)}
-                                  className="w-24 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-sm text-right"
+                                  className="w-24 px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-sm text-right"
                                 />
                               </td>
                               <td className="px-4 py-3 align-top text-right">
@@ -2021,11 +2021,11 @@ const CreditNotes = () => {
                                   step="0.01"
                                   value={item.unitPrice}
                                   onChange={(e) => updateIndependentLineItem(item.id, "unitPrice", e.target.value)}
-                                  className="w-28 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-sm text-right"
+                                  className="w-28 px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-sm text-right"
                                   placeholder="0.00"
                                 />
                               </td>
-                              <td className="px-4 py-3 align-top text-right font-semibold text-slate-700">
+                              <td className="px-4 py-3 align-top text-right font-semibold text-blue-700">
                                 {formatCurrency(lineTotal)}
                               </td>
                               <td className="px-4 py-3 align-top text-center">
@@ -2047,14 +2047,14 @@ const CreditNotes = () => {
                 )}
 
                 {hasIndependentLineItems && (
-                  <div className="px-4 py-3 border-t border-slate-200 bg-slate-50 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-3 bg-white border border-slate-200 rounded-lg">
-                      <p className="text-xs uppercase text-slate-500 tracking-wide">Items</p>
-                      <p className="text-xl font-bold text-slate-800">{independentLineItems.length}</p>
+                  <div className="px-4 py-3 border-t border-blue-200 bg-blue-50 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-3 bg-white border border-blue-200 rounded-lg">
+                      <p className="text-xs uppercase text-blue-500 tracking-wide">Items</p>
+                      <p className="text-xl font-bold text-blue-800">{independentLineItems.length}</p>
                     </div>
-                    <div className="p-3 bg-white border border-slate-200 rounded-lg md:col-span-2">
-                      <p className="text-xs uppercase text-slate-500 tracking-wide">Auto calculated credit</p>
-                      <p className="text-2xl font-bold text-slate-800">{formatCurrency(independentLineItemsTotal)}</p>
+                    <div className="p-3 bg-white border border-blue-200 rounded-lg md:col-span-2">
+                      <p className="text-xs uppercase text-blue-500 tracking-wide">Auto calculated credit</p>
+                      <p className="text-2xl font-bold text-blue-800">{formatCurrency(independentLineItemsTotal)}</p>
                     </div>
                   </div>
                 )}
@@ -2073,13 +2073,13 @@ const CreditNotes = () => {
                     value={finalIndependentAmount}
                     onChange={(e) => setIndependentAmount(parseFloat(e.target.value) || 0)}
                     readOnly={hasIndependentLineItems}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-gray-700 ${
-                      hasIndependentLineItems ? "bg-slate-100 cursor-not-allowed" : "bg-gray-50"
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-700 ${
+                      hasIndependentLineItems ? "bg-blue-100 cursor-not-allowed" : "bg-gray-50"
                     }`}
                     placeholder="0.00"
                   />
                   {hasIndependentLineItems && (
-                    <p className="text-xs text-slate-500 mt-1">Amount is auto-calculated from the line items.</p>
+                    <p className="text-xs text-blue-500 mt-1">Amount is auto-calculated from the line items.</p>
                   )}
                 </div>
 
@@ -2091,7 +2091,7 @@ const CreditNotes = () => {
                     type="date"
                     value={independentDate}
                     onChange={(e) => setIndependentDate(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-gray-700"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-700"
                   />
                 </div>
 
@@ -2103,7 +2103,7 @@ const CreditNotes = () => {
                     type="text"
                     value={independentReference}
                     onChange={(e) => setIndependentReference(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-gray-700"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-700"
                     placeholder="REF-001"
                   />
                 </div>
@@ -2120,7 +2120,7 @@ const CreditNotes = () => {
                   value={independentDescription}
                   onChange={(e) => setIndependentDescription(e.target.value)}
                   rows={4}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-slate-500/50 focus:border-slate-500 text-gray-700 resize-none"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-700 resize-none"
                   placeholder="Enter additional details about the credit note..."
                 />
               </div>
@@ -2132,7 +2132,7 @@ const CreditNotes = () => {
                   id="independentProcessImmediately"
                   checked={independentProcessImmediately}
                   onChange={(e) => setIndependentProcessImmediately(e.target.checked)}
-                  className="rounded border-gray-300 text-slate-600 focus:ring-slate-500"
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <label htmlFor="independentProcessImmediately" className="text-sm text-gray-700 cursor-pointer">
                   <span className="font-medium">Process immediately</span>
@@ -2167,7 +2167,7 @@ const CreditNotes = () => {
                   className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
                     loading || !independentCustomer || finalIndependentAmount <= 0 || hasIncompleteIndependentItems
                       ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                      : "bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white shadow-lg"
+                      : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg"
                   }`}
                 >
                   {loading ? (
