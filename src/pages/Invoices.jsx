@@ -110,6 +110,8 @@ const Invoices = () => {
     setShowPendingOnly,
     showCancelledOnly,
     setShowCancelledOnly,
+    lpoFilter,
+    setLpoFilter,
   sortOrder,
   setSortOrder,
     // Functions
@@ -291,6 +293,8 @@ const Invoices = () => {
             setShowPendingOnly={setShowPendingOnly}
             showCancelledOnly={showCancelledOnly}
             setShowCancelledOnly={setShowCancelledOnly}
+            lpoFilter={lpoFilter}
+            setLpoFilter={setLpoFilter}
             sortOrder={sortOrder}
             setSortOrder={setSortOrder}
             invoices={invoices}

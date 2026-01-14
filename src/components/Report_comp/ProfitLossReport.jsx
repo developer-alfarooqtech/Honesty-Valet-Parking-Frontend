@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { getProfitLossReport } from "../../service/reportService";
+import React from "react";
 import LoadingSpinner from "./LoadingSpinner";
 import ErrorMessage from "./ErrorMessage";
 import SummaryCard from "./SummaryCard";
@@ -7,37 +6,14 @@ import ProfitLossChart from "./ProfitLossChart";
 import { Download, TrendingUp, DollarSign, Users, ShoppingCart, CreditCard, BarChart3 } from "lucide-react";
 
 const ProfitLossReport = ({
+  data,
+  loading,
   dateRange,
   handleDownloadReport,
   isDownloading,
 }) => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await getProfitLossReport({
-        startDate: dateRange.start,
-        endDate: dateRange.end,
-      });
-      setData(response.data);
-
-    } catch (err) {
-      setError("Failed to load profit & loss data");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [dateRange]);
-
   if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage message={error} onRetry={fetchData} />;
+  if (!data) return null;
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-blue-200">
@@ -281,4 +257,4 @@ const ProfitLossReport = ({
   );
 };
 
-export default ProfitLossReport;
+export default React.memo(ProfitLossReport);

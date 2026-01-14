@@ -1,5 +1,5 @@
 import { Calendar, Download, TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import DashboardSummary from "../components/Report_comp/DashboardSummery";
 import ProfitLossReport from "../components/Report_comp/ProfitLossReport";
 import AccountsReceivableReport from "../components/Report_comp/AccountsReceivableReport";
@@ -25,8 +25,143 @@ const Report = () => {
   const [activeFilter, setActiveFilter] = useState("all");
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [isDownloading, setIsDownloading] = useState(false);
+  const [reportData, setReportData] = useState({
+    dashboard: null,
+    profitLoss: null,
+    sales: null,
+    expense: null,
+    inventory: null,
+    purchase: null,
+    accountsReceivable: null
+  });
+  const [loadingStates, setLoadingStates] = useState({
+    dashboard: false,
+    profitLoss: false,
+    sales: false,
+    expense: false,
+    inventory: false,
+    purchase: false,
+    accountsReceivable: false
+  });
 
-  const handleDownloadReport = async (reportType) => {
+  // Debounce the date range to prevent excessive updates
+  const debouncedDateRange = useDebounce(dateRange, 500);
+
+  // Determine which reports to load based on activeFilter
+  const reportsToLoad = useMemo(() => {
+    const reports = {
+      dashboard: true, // Always load dashboard
+    };
+
+    switch (activeFilter) {
+      case "all":
+        reports.profitLoss = true;
+        reports.accountsReceivable = true;
+        reports.sales = true;
+        reports.expense = true;
+        reports.inventory = true;
+        reports.purchase = true;
+        break;
+      case "financial":
+        reports.profitLoss = true;
+        reports.accountsReceivable = true;
+        reports.purchase = true;
+        break;
+      case "orders":
+        reports.sales = true;
+        break;
+      case "inventory":
+        reports.inventory = true;
+        break;
+      case "expenses":
+        reports.expense = true;
+        break;
+    }
+    return reports;
+  }, [activeFilter]);
+
+  // Fetch data only for visible reports
+  useEffect(() => {
+    const fetchReports = async () => {
+      const promises = {};
+
+      if (reportsToLoad.dashboard && !reportData.dashboard) {
+        setLoadingStates(prev => ({ ...prev, dashboard: true }));
+        promises.dashboard = getDashboardSummary()
+          .then(response => ({ dashboard: response.data }))
+          .catch(() => ({ dashboard: null }))
+          .finally(() => setLoadingStates(prev => ({ ...prev, dashboard: false })));
+      }
+
+      if (reportsToLoad.profitLoss) {
+        setLoadingStates(prev => ({ ...prev, profitLoss: true }));
+        promises.profitLoss = getProfitLossReport({
+          startDate: debouncedDateRange.start,
+          endDate: debouncedDateRange.end,
+        })
+          .then(response => ({ profitLoss: response.data }))
+          .catch(() => ({ profitLoss: null }))
+          .finally(() => setLoadingStates(prev => ({ ...prev, profitLoss: false })));
+      }
+
+      if (reportsToLoad.sales) {
+        setLoadingStates(prev => ({ ...prev, sales: true }));
+        promises.sales = getSalesReport({
+          startDate: debouncedDateRange.start,
+          endDate: debouncedDateRange.end,
+        })
+          .then(response => ({ sales: response.data }))
+          .catch(() => ({ sales: null }))
+          .finally(() => setLoadingStates(prev => ({ ...prev, sales: false })));
+      }
+
+      if (reportsToLoad.expense) {
+        setLoadingStates(prev => ({ ...prev, expense: true }));
+        promises.expense = getExpenseReport({
+          startDate: debouncedDateRange.start,
+          endDate: debouncedDateRange.end,
+        })
+          .then(response => ({ expense: response.data }))
+          .catch(() => ({ expense: null }))
+          .finally(() => setLoadingStates(prev => ({ ...prev, expense: false })));
+      }
+
+      if (reportsToLoad.inventory) {
+        setLoadingStates(prev => ({ ...prev, inventory: true }));
+        promises.inventory = getInventoryReport()
+          .then(response => ({ inventory: response.data }))
+          .catch(() => ({ inventory: null }))
+          .finally(() => setLoadingStates(prev => ({ ...prev, inventory: false })));
+      }
+
+      if (reportsToLoad.purchase) {
+        setLoadingStates(prev => ({ ...prev, purchase: true }));
+        promises.purchase = getPurchaseReport({
+          startDate: debouncedDateRange.start,
+          endDate: debouncedDateRange.end,
+        })
+          .then(response => ({ purchase: response.data }))
+          .catch(() => ({ purchase: null }))
+          .finally(() => setLoadingStates(prev => ({ ...prev, purchase: false })));
+      }
+
+      if (reportsToLoad.accountsReceivable) {
+        setLoadingStates(prev => ({ ...prev, accountsReceivable: true }));
+        promises.accountsReceivable = getAccountsReceivableReport()
+          .then(response => ({ accountsReceivable: response.data }))
+          .catch(() => ({ accountsReceivable: null }))
+          .finally(() => setLoadingStates(prev => ({ ...prev, accountsReceivable: false })));
+      }
+
+      const results = await Promise.all(Object.values(promises));
+      const newData = Object.assign({}, ...results);
+      setReportData(prev => ({ ...prev, ...newData }));
+    };
+
+    fetchReports();
+  }, [reportsToLoad, debouncedDateRange]);
+
+  const handleDownloadReport = useCallback(async (reportType) => {
     setIsDownloading(true);
     try {
       let reportData;
@@ -83,9 +218,9 @@ const Report = () => {
     } finally {
       setIsDownloading(false);
     }
-  };
+  }, [debouncedDateRange]);
 
-  const handleDownloadAllReports = async () => {
+  const handleDownloadAllReports = useCallback(async () => {
     setIsDownloading(true);
     try {
       const reportTypes = [
@@ -161,10 +296,8 @@ const Report = () => {
     } finally {
       setIsDownloading(false);
     }
-  };
+  }, [debouncedDateRange]);
 
-  // Debounce the date range to prevent excessive updates
-  const debouncedDateRange = useDebounce(dateRange, 500);
   return (
     <div className="min-h-screen  p-6">
       <div className="max-w-8xl mx-auto">
@@ -244,8 +377,10 @@ const Report = () => {
           </div>
         </div>
 
-        {/* Dashboard Summary */}
+        {/* Dashboard Summary - Always visible */}
         <DashboardSummary
+          data={reportData.dashboard}
+          loading={loadingStates.dashboard}
           handleDownloadReport={handleDownloadReport}
           isDownloading={isDownloading}
         />
@@ -255,11 +390,15 @@ const Report = () => {
           {(activeFilter === "all" || activeFilter === "financial") && (
             <>
               <ProfitLossReport
+                data={reportData.profitLoss}
+                loading={loadingStates.profitLoss}
                 dateRange={debouncedDateRange}
                 handleDownloadReport={handleDownloadReport}
                 isDownloading={isDownloading}
               />
               <AccountsReceivableReport
+                data={reportData.accountsReceivable}
+                loading={loadingStates.accountsReceivable}
                 handleDownloadReport={handleDownloadReport}
                 isDownloading={isDownloading}
               />
@@ -268,6 +407,8 @@ const Report = () => {
 
           {(activeFilter === "all" || activeFilter === "orders") && (
             <SalesReport
+              data={reportData.sales}
+              loading={loadingStates.sales}
               dateRange={debouncedDateRange}
               handleDownloadReport={handleDownloadReport}
               isDownloading={isDownloading}
@@ -276,6 +417,8 @@ const Report = () => {
 
           {(activeFilter === "all" || activeFilter === "expenses") && (
             <ExpenseReport
+              data={reportData.expense}
+              loading={loadingStates.expense}
               dateRange={debouncedDateRange}
               handleDownloadReport={handleDownloadReport}
               isDownloading={isDownloading}
@@ -284,6 +427,8 @@ const Report = () => {
 
           {(activeFilter === "all" || activeFilter === "inventory") && (
             <InventoryReport
+              data={reportData.inventory}
+              loading={loadingStates.inventory}
               dateRange={debouncedDateRange}
               handleDownloadReport={handleDownloadReport}
               isDownloading={isDownloading}
@@ -292,6 +437,8 @@ const Report = () => {
 
           {(activeFilter === "all" || activeFilter === "financial") && (
             <PurchaseReport
+              data={reportData.purchase}
+              loading={loadingStates.purchase}
               dateRange={debouncedDateRange}
               handleDownloadReport={handleDownloadReport}
               isDownloading={isDownloading}

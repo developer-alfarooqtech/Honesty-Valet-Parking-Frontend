@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { getExpenseReport } from "../../service/reportService";
+import React from "react";
 import LoadingSpinner from "./LoadingSpinner";
 import ErrorMessage from "./ErrorMessage";
 import { Download, TrendingDown } from "lucide-react";
@@ -13,33 +12,9 @@ import {
   Cell,
 } from "recharts";
 
-const ExpenseReport = ({ dateRange, handleDownloadReport, isDownloading }) => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await getExpenseReport({
-        startDate: dateRange.start,
-        endDate: dateRange.end,
-      });
-      setData(response.data);
-    } catch (err) {
-      setError("Failed to load expense data");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [dateRange]);
-
+const ExpenseReport = ({ data, loading, dateRange, handleDownloadReport, isDownloading }) => {
   if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage message={error} onRetry={fetchData} />;
+  if (!data) return null;
 
   // Sort categories by value (highest first) for better visualization
   const categoryData = Object.entries(data.categoryBreakdown)
@@ -237,4 +212,4 @@ const ExpenseReport = ({ dateRange, handleDownloadReport, isDownloading }) => {
   );
 };
 
-export default ExpenseReport;
+export default React.memo(ExpenseReport);

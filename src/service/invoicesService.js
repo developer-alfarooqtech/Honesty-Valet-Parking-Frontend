@@ -22,8 +22,8 @@ export const fetchAllInvoices = async ({
   paymentClearedOnly,
   sort = 'newest',
   customerId = "",
-  customerIds = [],
-}) => {
+  customerIds = [],  withLpoOnly = false,
+  withoutLpoOnly = false,}) => {
   const params = new URLSearchParams({
     page: currentPage,
     limit,
@@ -35,6 +35,8 @@ export const fetchAllInvoices = async ({
     pendingOnly,
     cancelledOnly,
     sort,
+    withLpoOnly,
+    withoutLpoOnly,
   });
 
   if (customerId) {
@@ -55,8 +57,8 @@ export const downloadInvoices = async ({
   cancelledOnly,
   sort = 'newest',
   customerId = "",
-  customerIds = [],
-}) => {
+  customerIds = [],  withLpoOnly = false,
+  withoutLpoOnly = false,}) => {
   const params = new URLSearchParams({
     search: debouncedSearchTerm || "",
     startDate: startDate || "",
@@ -66,6 +68,8 @@ export const downloadInvoices = async ({
     pendingOnly,
     cancelledOnly,
     sort,
+    withLpoOnly,
+    withoutLpoOnly,
   });
 
   if (customerId) {

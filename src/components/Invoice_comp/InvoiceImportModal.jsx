@@ -147,15 +147,15 @@ const InvoiceImportModal = ({
             <p className="text-xs font-semibold uppercase tracking-wide text-blue-500">
               Bulk Upload
             </p>
-            <h2 className="text-2xl font-bold text-slate-900">Import Invoices</h2>
-            <p className="text-sm text-slate-500">
+            <h2 className="text-2xl font-bold text-blue-900">Import Invoices</h2>
+            <p className="text-sm text-blue-500">
               Upload a spreadsheet to create multiple invoices instantly.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100"
+            className="rounded-full p-2 text-blue-500 transition hover:bg-blue-100"
             aria-label="Close import modal"
           >
             <X size={20} />
@@ -168,7 +168,7 @@ const InvoiceImportModal = ({
               <FileSpreadsheet size={20} />
               <p className="text-sm font-semibold">Template expectations</p>
             </div>
-            <ul className="mt-3 space-y-2 text-xs text-slate-600">
+            <ul className="mt-3 space-y-2 text-xs text-blue-600">
               {helperTips.map((tip) => (
                 <li key={tip} className="flex items-start gap-2">
                   <span className="mt-1 h-1.5 w-1.5 rounded-full bg-blue-400" />
@@ -185,16 +185,16 @@ const InvoiceImportModal = ({
             </button>
           </div>
 
-          <form className="flex flex-col rounded-xl border border-slate-200 p-4" onSubmit={handleSubmit}>
+          <form className="flex flex-col rounded-xl border border-blue-200 p-4" onSubmit={handleSubmit}>
             <label
               htmlFor="invoice-import-input"
-              className="flex flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 px-4 py-6 text-center text-slate-500 transition hover:border-blue-400 hover:text-blue-500"
+              className="flex flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-blue-300 px-4 py-6 text-center text-blue-500 transition hover:border-blue-400 hover:text-blue-500"
             >
               <UploadCloud className="mb-3 text-blue-500" size={32} />
               <p className="text-sm font-semibold">
                 {selectedFile ? selectedFile.name : "Choose .csv, .xls, or .xlsx"}
               </p>
-              <p className="text-xs text-slate-400">Max 5 MB</p>
+              <p className="text-xs text-blue-400">Max 5 MB</p>
               <input
                 id="invoice-import-input"
                 type="file"
@@ -210,11 +210,11 @@ const InvoiceImportModal = ({
 
             {importing && (
               <div className="mt-4">
-                <div className="flex items-center justify-between text-xs text-slate-500">
+                <div className="flex items-center justify-between text-xs text-blue-500">
                   <span>Uploading file</span>
                   <span>{progress}%</span>
                 </div>
-                <div className="mt-1 h-2 rounded-full bg-slate-100">
+                <div className="mt-1 h-2 rounded-full bg-blue-100">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all"
                     style={{ width: `${progress}%` }}
@@ -229,7 +229,7 @@ const InvoiceImportModal = ({
               className={`mt-5 inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition ${
                 selectedFile && !importing
                   ? "bg-blue-600 hover:bg-blue-700"
-                  : "cursor-not-allowed bg-slate-300"
+                  : "cursor-not-allowed bg-blue-300"
               }`}
             >
               {importing ? (
@@ -246,7 +246,7 @@ const InvoiceImportModal = ({
         </div>
 
         {summary && (
-          <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-4">
             <div className="flex flex-wrap gap-6 text-sm">
               <div className="flex items-center gap-2 text-green-600">
                 <CheckCircle2 size={18} /> Imported: {summary.importedCount || 0}
@@ -270,7 +270,7 @@ const InvoiceImportModal = ({
                   ))}
                 </ul>
                 {summary.failedCount > failureRows.length && (
-                  <p className="mt-2 text-xs text-slate-500">
+                  <p className="mt-2 text-xs text-blue-500">
                     +{summary.failedCount - failureRows.length} more issue(s).
                   </p>
                 )}

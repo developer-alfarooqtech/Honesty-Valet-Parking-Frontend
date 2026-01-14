@@ -20,7 +20,7 @@ const ToggleSwitch = ({ checked, onChange, label, id }) => {
           <div className={`block w-12 h-6 rounded-full transition-colors duration-300 ${checked ? 'bg-green-500' : 'bg-gray-300'}`}></div>
           <div 
             className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-md 
-            ${checked ? 'transform translate-x-6' : ''}`}
+            ${checked ? 'transform tranblue-x-6' : ''}`}
           ></div>
         </div>
        

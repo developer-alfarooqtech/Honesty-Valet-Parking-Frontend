@@ -8,35 +8,13 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { getDashboardSummary } from "../../service/reportService";
+import React from "react";
 import LoadingSpinner from "./LoadingSpinner";
 import ErrorMessage from "./ErrorMessage";
 
-const DashboardSummary = ({ handleDownloadReport, isDownloading }) => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await getDashboardSummary();
-      setData(response.data);
-    } catch (err) {
-      setError("Failed to load dashboard summary");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
+const DashboardSummary = ({ data, loading, handleDownloadReport, isDownloading }) => {
   if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage message={error} onRetry={fetchData} />;
+  if (!data) return null;
 
   const cards = [
     {
@@ -132,4 +110,4 @@ const DashboardSummary = ({ handleDownloadReport, isDownloading }) => {
   );
 };
 
-export default DashboardSummary;
+export default React.memo(DashboardSummary);

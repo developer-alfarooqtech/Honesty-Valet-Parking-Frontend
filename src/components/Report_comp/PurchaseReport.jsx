@@ -1,33 +1,11 @@
-import { useEffect, useState } from "react";
-import { getPurchaseReport } from "../../service/reportService";
+import React from "react";
 import LoadingSpinner from "./LoadingSpinner";
 import ErrorMessage from "./ErrorMessage";
 import { Download, ShoppingCart } from "lucide-react";
 
-const PurchaseReport = ({dateRange,handleDownloadReport,isDownloading}) => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await getPurchaseReport({startDate:dateRange.start, endDate:dateRange.end});
-      setData(response.data);
-    } catch (err) {
-      setError('Failed to load purchase data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [dateRange]);
-
+const PurchaseReport = ({ data, loading, dateRange, handleDownloadReport, isDownloading }) => {
   if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage message={error} onRetry={fetchData} />;
+  if (!data) return null;
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 border border-blue-100">
@@ -66,4 +44,4 @@ const PurchaseReport = ({dateRange,handleDownloadReport,isDownloading}) => {
   );
 };
 
-export default PurchaseReport
+export default React.memo(PurchaseReport);

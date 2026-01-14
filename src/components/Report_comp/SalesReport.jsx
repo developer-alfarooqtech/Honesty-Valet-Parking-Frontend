@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { getSalesReport } from "../../service/reportService";
+import React from "react";
 import LoadingSpinner from "./LoadingSpinner";
 import ErrorMessage from "./ErrorMessage";
 import { Download, ShoppingCart } from "lucide-react";
@@ -13,33 +12,9 @@ import {
   YAxis,
 } from "recharts";
 
-const SalesReport = ({ dateRange, handleDownloadReport, isDownloading }) => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await getSalesReport({
-        startDate: dateRange.start,
-        endDate: dateRange.end,
-      });
-      setData(response.data);
-    } catch (err) {
-      setError("Failed to load sales data");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [dateRange]);
-
+const SalesReport = ({ data, loading, dateRange, handleDownloadReport, isDownloading }) => {
   if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage message={error} onRetry={fetchData} />;
+  if (!data) return null;
 
   const chartData = Object.entries(data.monthlyData).map(([month, values]) => ({
     month: new Date(month + "-01").toLocaleDateString("en-US", {
@@ -136,4 +111,4 @@ const SalesReport = ({ dateRange, handleDownloadReport, isDownloading }) => {
   );
 };
 
-export default SalesReport;
+export default React.memo(SalesReport);

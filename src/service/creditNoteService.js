@@ -30,7 +30,7 @@ export const downloadCreditNotes = async ({
   creditTypeFilter = "all",
 }) => {
   return await api.get(
-    `/download-credit-notes?search=${debouncedSearchTerm}&startDate=${startDate}&endDate=${endDate}&processedOnly=${showProcessedOnly}&pendingOnly=${showPendingOnly}&cancelledOnly=${showCancelledOnly}&customerId=${customerId}&creditType=${creditTypeFilter}`
+    `/download-credit-notes?limit=10000&search=${debouncedSearchTerm}&startDate=${startDate}&endDate=${endDate}&processedOnly=${showProcessedOnly}&pendingOnly=${showPendingOnly}&cancelledOnly=${showCancelledOnly}&customerId=${customerId}&creditType=${creditTypeFilter}`
   );
 };
 

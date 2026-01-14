@@ -11,6 +11,7 @@ import {
   createInvoiceDirectly,
   updateInvoice,
 } from "../service/invoicesService";
+import { downloadCreditNotes } from "../service/creditNoteService";
 import { fetchBanks } from "../service/bankService";
 import { downloadInvoicesAsPDF } from "../components/Invoice_comp/DownloadSelectedInvoices";
 import useDebounce from "./useDebounce";
@@ -65,6 +66,7 @@ export const useInvoiceLogic = () => {
   const [showPaymentClearedOnly, setShowPaymentClearedOnly] = useState(false);
   const [showPendingOnly, setShowPendingOnly] = useState(false);
   const [showCancelledOnly, setShowCancelledOnly] = useState(false);
+  const [lpoFilter, setLpoFilter] = useState('all'); // 'all', 'with', 'without'
   // Server-side sort order: 'newest' or 'oldest'
   const [sortOrder, setSortOrder] = useState('newest');
 
@@ -136,11 +138,15 @@ export const useInvoiceLogic = () => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "";
+    
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    
+    return `${day}/${month}/${year}`;
   };
 
   const getUniqueKey = () => uuidv4();
@@ -205,6 +211,7 @@ export const useInvoiceLogic = () => {
     showPaymentClearedOnly,
     showPendingOnly,
     showCancelledOnly,
+    lpoFilter,
     sortOrder,
     selectedCustomer,
     selectedCustomers,
@@ -296,6 +303,8 @@ export const useInvoiceLogic = () => {
         sort: sortOrder,
         customerId: selectedCustomerIds.length === 0 ? selectedCustomer?._id || "" : "",
         customerIds: selectedCustomerIds,
+        withLpoOnly: lpoFilter === 'with',
+        withoutLpoOnly: lpoFilter === 'without',
       });
       const data = await response?.data;
 
@@ -338,6 +347,8 @@ export const useInvoiceLogic = () => {
         sort: sortOrder,
         customerId: selectedCustomerIds.length === 0 ? selectedCustomer?._id || "" : "",
         customerIds: selectedCustomerIds,
+        withLpoOnly: lpoFilter === 'with',
+        withoutLpoOnly: lpoFilter === 'without',
       });
 
       if (!response.data || !response.data.invoices) {
@@ -347,6 +358,30 @@ export const useInvoiceLogic = () => {
 
       const { invoices } = response.data;
       const stats = invoiceStats || {};
+
+      // Fetch pending credit notes if downloading pending invoices
+      let creditNotes = [];
+      if (showPendingOnly) {
+        try {
+          const creditNoteResponse = await downloadCreditNotes({
+            debouncedSearchTerm,
+            startDate,
+            endDate,
+            showProcessedOnly: false,
+            showPendingOnly: true,
+            showCancelledOnly: false,
+            customerId: selectedCustomerIds.length === 0 ? selectedCustomer?._id || "" : "",
+            creditTypeFilter: "all",
+          });
+          if (creditNoteResponse.data && creditNoteResponse.data.data) {
+            creditNotes = creditNoteResponse.data.data;
+          }
+          console.log("Fetched credit notes:", creditNotes.length);
+        } catch (error) {
+          console.error("Error fetching credit notes:", error);
+          // Continue with just invoices if credit notes fail
+        }
+      }
 
       const XLSX = await import("xlsx");
       const workbook = XLSX.utils.book_new();
@@ -414,6 +449,29 @@ export const useInvoiceLogic = () => {
           return values.length ? values.join(", ") : "N/A";
         };
 
+        // Get only the first service note (for pending reports only)
+        const getFirstServiceNote = () => {
+          if (services.length > 0) {
+            const firstService = services[0];
+            const note = [firstService.note, firstService.additionalNote]
+              .filter((n) => n && n.trim())
+              .join(" | ");
+            return note || "N/A";
+          }
+          return "N/A";
+        };
+
+        // Determine which note to use based on whether it's a pending report
+        const getItemNote = () => {
+          if (showPendingOnly) {
+            // For pending reports, only show first service note
+            return getFirstServiceNote();
+          } else {
+            // For other reports, show all combined notes
+            return combineValues((item) => item.note);
+          }
+        };
+
         // Show quantities only (e.g., "54, 75") instead of repeating item names
         const quantitySummary = allItems
           .map((item) => item.quantity ?? 0)
@@ -423,7 +481,15 @@ export const useInvoiceLogic = () => {
 
         if (allItems.length === 0) {
           worksheetData.push({
-            ...baseInfo,
+            Type: "Invoice",
+            "Invoice Number": baseInfo["Invoice Number"],
+            "LPO": baseInfo["LPO"],
+            "Customer Name": baseInfo["Customer Name"],
+            "Customer Code": baseInfo["Customer Code"],
+            "Invoice Date": baseInfo["Invoice Date"],
+            "Last Updated": baseInfo["Last Updated"],
+            "Expiry Date": baseInfo["Expiry Date"],
+            "Days Overdue": baseInfo["Days Overdue"],
             "Item Note": "N/A",
             "Item Code": "N/A",
             "Quantity": "N/A",
@@ -446,8 +512,19 @@ export const useInvoiceLogic = () => {
         }
 
         worksheetData.push({
-          ...baseInfo,
-          "Item Note": combineValues((item) => item.note),
+          Type: "Invoice",
+          "Invoice Number": inv.name || "N/A",
+          "LPO": inv.lpo || "N/A",
+          "Customer Name": inv.salesOrderId?.customer?.name || inv.customer?.name || "N/A",
+          "Customer Code": inv.salesOrderId?.customer?.Code || inv.customer?.Code || "N/A",
+          "Invoice Date": formatDate(inv?.date || inv?.createdAt),
+          "Last Updated": formatDate(inv?.updatedAt),
+          "Expiry Date": formatDate(inv?.expDate),
+          "Days Overdue":
+            inv.expDate && isExpired(inv.expDate)
+              ? Math.floor((new Date() - new Date(inv.expDate)) / (1000 * 60 * 60 * 24))
+              : 0,
+          "Item Note": getItemNote(),
           "Item Code": combineValues((item) => item.code),
           "Quantity": quantitySummary || "N/A",
           "Unit Price": combineValues((item) => item.unitPrice),
@@ -467,8 +544,60 @@ export const useInvoiceLogic = () => {
         });
       });
 
+      // Add credit notes to the worksheet if downloading pending report
+      if (showPendingOnly && creditNotes.length > 0) {
+        creditNotes.forEach((cn) => {
+          const items = cn.items || [];
+          const itemNotes = items.length > 0 
+            ? items.map(item => {
+                const itemName = item.name || item.product?.name || item.service?.name || "";
+                const itemNote = item.note || "";
+                if (itemName && itemNote) {
+                  return `${itemName}: ${itemNote}`;
+                } else if (itemName) {
+                  return itemName;
+                } else if (itemNote) {
+                  return itemNote;
+                }
+                return "";
+              }).filter(n => n && n.trim()).join(", ") 
+            : "N/A";
+          const itemCodes = items.length > 0 
+            ? items.map(item => item.product?.code || item.service?.code || "").filter(c => c).join(", ") 
+            : "N/A";
+          const quantities = items.length > 0 
+            ? items.map(item => item.creditedQuantity || 0).join(", ") 
+            : "N/A";
+
+          worksheetData.push({
+            Type: "Credit Note",
+            "Invoice Number": cn.creditNoteNumber || "N/A",
+            "LPO": "N/A",
+            "Customer Name": cn.customer?.name || "N/A",
+            "Customer Code": cn.customer?.Code || "N/A",
+            "Invoice Date": formatDate(cn?.date),
+            "Last Updated": formatDate(cn?.updatedAt),
+            "Expiry Date": "N/A",
+            "Days Overdue": 0,
+            "Item Note": itemNotes,
+            "Item Code": itemCodes,
+            "Quantity": quantities,
+            "Unit Price": "N/A",
+            "Net Amount": formatMoney(cn.netAmount),
+            "VAT Amount": formatMoney(cn.vatAmount),
+            "Discount": formatMoney(cn.discount),
+            "Total Amount": formatMoney(-Math.abs(cn.creditAmount)),
+            "Amount Paid": formatMoney(-Math.abs(cn.creditAmount - cn.remainingBalance)),
+            "Balance Due": formatMoney(-Math.abs(cn.remainingBalance)),
+            "Payment Status": cn.status === 'processed' ? "Processed" : "Pending",
+            "Status": cn.status === 'cancelled' ? "Cancelled" : cn.status === 'processed' ? "Processed" : "Pending",
+          });
+        });
+      }
+
       const worksheet = XLSX.utils.json_to_sheet(worksheetData);
       const columnWidths = [
+        { wch: 12 }, // Type
         { wch: 15 }, // Invoice Number
         { wch: 12 }, // LPO
         { wch: 22 }, // Customer Name
@@ -676,6 +805,7 @@ export const useInvoiceLogic = () => {
     showPaymentClearedOnly, setShowPaymentClearedOnly,
     showPendingOnly, setShowPendingOnly,
     showCancelledOnly, setShowCancelledOnly,
+    lpoFilter, setLpoFilter,
     invoiceStats, setInvoiceStats,
     statsLoading, setStatsLoading,
     editingInvoice, setEditingInvoice,

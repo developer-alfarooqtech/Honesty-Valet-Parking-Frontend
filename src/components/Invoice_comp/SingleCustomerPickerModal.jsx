@@ -318,7 +318,7 @@ const SingleCustomerPickerModal = ({
         <div className="px-6 py-4 border-b border-blue-50 bg-white">
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
             <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-blue-400" />
+              <Search className="absolute left-3 top-1/2 -tranblue-y-1/2 h-5 w-5 text-blue-400" />
               <input
                 type="text"
                 placeholder="Search by name or code..."

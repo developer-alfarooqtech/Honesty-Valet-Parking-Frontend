@@ -1,33 +1,11 @@
-import { useEffect, useState } from "react";
-import { getInventoryReport } from "../../service/reportService";
+import React from "react";
 import LoadingSpinner from "./LoadingSpinner";
 import ErrorMessage from "./ErrorMessage";
 import { Download, Package } from "lucide-react";
 
-const InventoryReport = ({ handleDownloadReport, isDownloading }) => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await getInventoryReport();
-      setData(response.data);
-    } catch (err) {
-      setError("Failed to load inventory data");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
+const InventoryReport = ({ data, loading, handleDownloadReport, isDownloading }) => {
   if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage message={error} onRetry={fetchData} />;
+  if (!data) return null;
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 border border-blue-100">
@@ -78,4 +56,4 @@ const InventoryReport = ({ handleDownloadReport, isDownloading }) => {
   );
 };
 
-export default InventoryReport;
+export default React.memo(InventoryReport);

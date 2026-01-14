@@ -33,6 +33,8 @@ const InvoiceFiltersPanel = ({
   setShowPendingOnly,
   showCancelledOnly,
   setShowCancelledOnly,
+  lpoFilter,
+  setLpoFilter,
   sortOrder,
   setSortOrder,
   invoices,
@@ -49,6 +51,7 @@ const InvoiceFiltersPanel = ({
     showPaymentClearedOnly ||
     showPendingOnly ||
     showCancelledOnly ||
+    lpoFilter !== 'all' ||
     selectedCustomer ||
     (selectedCustomers && selectedCustomers.length > 0);
 
@@ -67,6 +70,8 @@ const InvoiceFiltersPanel = ({
     if (showPaymentClearedOnly) filters.push("Fully Paid Only");
     if (showPendingOnly) filters.push("Pending Only");
     if (showCancelledOnly) filters.push("Cancelled Only");
+    if (lpoFilter === 'with') filters.push("With LPO");
+    if (lpoFilter === 'without') filters.push("Without LPO");
     
     return filters.length > 0 ? filters.join(", ") : "No filters applied";
   };
@@ -215,6 +220,23 @@ const InvoiceFiltersPanel = ({
             </div>
           </div>
 
+          {/* LPO Presence */}
+          <div className="lg:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              LPO Presence
+            </label>
+            <select
+              value={lpoFilter}
+              onChange={(e) => setLpoFilter(e.target.value)}
+              className="w-full px-3 py-2.5 border border-gray-200 bg-gray-50 rounded-lg text-gray-700 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
+              title="Filter by LPO presence"
+            >
+              <option value="all">All Invoices</option>
+              <option value="with">With LPO</option>
+              <option value="without">Without LPO</option>
+            </select>
+          </div>
+
           {/* Sort Order */}
           <div className="lg:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -274,7 +296,7 @@ const InvoiceFiltersPanel = ({
                   onChange={(e) => setShowOverdueOnly(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-red-500 peer-checked:to-red-600"></div>
+                <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300/20 rounded-full peer peer-checked:after:tranblue-x-full rtl:peer-checked:after:-tranblue-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-red-500 peer-checked:to-red-600"></div>
                 <div className="ml-3 flex items-center">
                   <Clock
                     size={16}
@@ -302,7 +324,7 @@ const InvoiceFiltersPanel = ({
                   onChange={(e) => setShowPendingOnly(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-yellow-500 peer-checked:to-blue-500"></div>
+                <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300/20 rounded-full peer peer-checked:after:tranblue-x-full rtl:peer-checked:after:-tranblue-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-yellow-500 peer-checked:to-blue-500"></div>
                 <div className="ml-3 flex items-center">
                   <Clock
                     size={16}
@@ -330,7 +352,7 @@ const InvoiceFiltersPanel = ({
                   onChange={(e) => setShowPaymentClearedOnly(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-green-500 peer-checked:to-green-600"></div>
+                <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300/20 rounded-full peer peer-checked:after:tranblue-x-full rtl:peer-checked:after:-tranblue-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-green-500 peer-checked:to-green-600"></div>
                 <div className="ml-3 flex items-center">
                   <CheckSquare
                     size={16}
@@ -358,7 +380,7 @@ const InvoiceFiltersPanel = ({
                   onChange={(e) => setShowCancelledOnly(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-gray-500 peer-checked:to-gray-600"></div>
+                <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300/20 rounded-full peer peer-checked:after:tranblue-x-full rtl:peer-checked:after:-tranblue-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-gray-500 peer-checked:to-gray-600"></div>
                 <div className="ml-3 flex items-center">
                   <X
                     size={16}
@@ -386,6 +408,7 @@ const InvoiceFiltersPanel = ({
           showPaymentClearedOnly ||
           showPendingOnly ||
           showCancelledOnly ||
+          lpoFilter !== 'all' ||
           (selectedCustomers && selectedCustomers.length > 0) ||
           selectedCustomer ||
           searchTerm) && (

@@ -326,6 +326,8 @@ export const useInvoiceHandlers = (invoiceLogic) => {
       setShowPaymentClearedOnly,
       setShowPendingOnly,
       setShowCancelledOnly,
+      setShowWithLpoOnly,
+      setShowWithoutLpoOnly,
     } = invoiceLogic;
 
     setStartDate("");
@@ -334,6 +336,8 @@ export const useInvoiceHandlers = (invoiceLogic) => {
     setShowPaymentClearedOnly(false);
     setShowPendingOnly(false);
     setShowCancelledOnly(false);
+    setShowWithLpoOnly(false);
+    setShowWithoutLpoOnly(false);
     setSelectedCustomer(null);
     setSelectedCustomers([]);
     setCurrentPage(1);
