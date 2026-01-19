@@ -38,13 +38,14 @@ const Customers = () => {
   const [limit] = useState(100); // Items per page
   const [exportingPDF, setExportingPDF] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
+  const [sortOrder, setSortOrder] = useState('newest');
   // Apply debounce to search term
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
-  // Fetch customers on initial load and when search/pagination changes
+  // Fetch customers on initial load and when search/pagination/sort changes
   useEffect(() => {
     fetchCustomers();
-  }, [currentPage, debouncedSearchTerm]); // Use debounced value here
+  }, [currentPage, debouncedSearchTerm, sortOrder]); // Use debounced value here
 
   // Function to fetch customers with pagination and search
   const fetchCustomers = async () => {
@@ -54,6 +55,7 @@ const Customers = () => {
         page: currentPage,
         limit,
         search: debouncedSearchTerm, // Use debounced value here
+        sort: sortOrder,
       });
       setCustomers(response.data.customers);
       setTotalPages(response.data.totalPages);
@@ -69,6 +71,7 @@ const Customers = () => {
     await handleDownloadCustomersPDF({
       setExportingPDF,
       search: debouncedSearchTerm,
+      sort: sortOrder,
     });
   };
 
@@ -78,6 +81,7 @@ const Customers = () => {
       // Get raw data for Excel generation
       const response = await downloadCustomers({
         search: debouncedSearchTerm,
+        sort: sortOrder,
       });
 
       if (!response.data || !response.data.customers) {
@@ -189,6 +193,8 @@ const Customers = () => {
               searchTerm={searchTerm}
               onChange={handleSearchChange}
               onClear={() => setSearchTerm("")}
+              sortOrder={sortOrder}
+              onSortChange={setSortOrder}
             />
             <div className="flex mb-6 gap-2">
               <button
@@ -277,24 +283,42 @@ const CustomerHeader = ({ onAddClick }) => (
 );
 
 // Search bar component
-const SearchBar = ({ searchTerm, onChange, onClear }) => (
-  <div className="mb-6 relative">
-    <div className="flex items-center border border-blue-300 rounded-lg overflow-hidden">
-      <div className="pl-3">
-        <Search size={20} className="text-gray-400" />
+const SearchBar = ({ searchTerm, onChange, onClear, sortOrder, onSortChange }) => (
+  <div className="mb-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="md:col-span-2">
+        <div className="flex items-center border border-blue-300 rounded-lg overflow-hidden">
+          <div className="pl-3">
+            <Search size={20} className="text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search by name or code..."
+            value={searchTerm}
+            onChange={onChange}
+            className="w-full py-2 px-3 outline-none"
+          />
+          {searchTerm && (
+            <button onClick={onClear} className="pr-3">
+              <X size={18} className="text-gray-400 hover:text-gray-600" />
+            </button>
+          )}
+        </div>
       </div>
-      <input
-        type="text"
-        placeholder="Search by name or code..."
-        value={searchTerm}
-        onChange={onChange}
-        className="w-full py-2 px-3 outline-none"
-      />
-      {searchTerm && (
-        <button onClick={onClear} className="pr-3">
-          <X size={18} className="text-gray-400 hover:text-gray-600" />
-        </button>
-      )}
+      <div>
+        <select
+          value={sortOrder}
+          onChange={(e) => onSortChange(e.target.value)}
+          className="w-full px-3 py-2 border border-blue-300 rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+        >
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="name-asc">Name A-Z</option>
+          <option value="name-desc">Name Z-A</option>
+          <option value="code-asc">Code A-Z</option>
+          <option value="code-desc">Code Z-A</option>
+        </select>
+      </div>
     </div>
   </div>
 );

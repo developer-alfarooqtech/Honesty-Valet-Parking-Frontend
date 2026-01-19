@@ -246,10 +246,12 @@ const InvoiceFiltersPanel = ({
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
               className="w-full px-3 py-2.5 border border-gray-200 bg-gray-50 rounded-lg text-gray-700 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
-              title="Sort invoices by date"
+              title="Sort invoices"
             >
               <option value="newest">Newest first</option>
               <option value="oldest">Oldest first</option>
+              <option value="customer-asc">Customer A-Z</option>
+              <option value="customer-desc">Customer Z-A</option>
             </select>
           </div>
 

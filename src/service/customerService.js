@@ -13,20 +13,22 @@ export const searchCustomers = async (searchTerm) => {
   return await api.get(`/search-customers?term=${encodeURIComponent(searchTerm)}`);
 };
 // Get customers with pagination and optional search
-export const getCustomers = async ({ page = 1, limit = 100, search = '' }) => {
+export const getCustomers = async ({ page = 1, limit = 100, search = '', sort = 'newest' }) => {
   return await api.get('/customers', {
     params: {
       page,
       limit,
-      search
+      search,
+      sort
     }
   });
 };
 
-export const downloadCustomers = async ({ search = '' }) => {
+export const downloadCustomers = async ({ search = '', sort = 'newest' }) => {
   return await api.get('/downlaod-customers', {
     params: {
-      search
+      search,
+      sort
     }
   });
 };
