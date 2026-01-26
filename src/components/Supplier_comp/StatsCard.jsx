@@ -4,7 +4,6 @@ const StatsCard = ({ icon, title, value, color }) => {
   const colorClasses = {
     blue: "from-blue-500 to-blue-600 shadow-blue-500/25",
     green: "from-green-500 to-green-600 shadow-green-500/25",
-    blue: "from-blue-500 to-blue-600 shadow-blue-500/25",
     purple: "from-purple-500 to-purple-600 shadow-purple-500/25",
     red: "from-red-500 to-red-600 shadow-red-500/25",
   };

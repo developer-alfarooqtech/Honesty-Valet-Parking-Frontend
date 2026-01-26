@@ -169,8 +169,8 @@ const UserFormModal = ({
                 value={formData.name}
                 onChange={handleChange}
                 className={`w-full py-2 pl-10 pr-3 bg-white/50 backdrop-blur-md border rounded-lg focus:ring-2 focus:outline-none transition-all duration-200 ${errors.name
-                    ? "border-red-300 focus:ring-red-200"
-                    : "border-blue-200 focus:ring-blue-200"
+                  ? "border-red-300 focus:ring-red-200"
+                  : "border-blue-200 focus:ring-blue-200"
                   }`}
                 placeholder="Enter full name"
               />
@@ -198,8 +198,8 @@ const UserFormModal = ({
                 value={formData.loginId}
                 onChange={handleChange}
                 className={`w-full py-2 pl-10 pr-3 bg-white/50 backdrop-blur-md border rounded-lg focus:ring-2 focus:outline-none transition-all duration-200 ${errors.loginId
-                    ? "border-red-300 focus:ring-red-200"
-                    : "border-blue-200 focus:ring-blue-200"
+                  ? "border-red-300 focus:ring-red-200"
+                  : "border-blue-200 focus:ring-blue-200"
                   }`}
                 placeholder="Enter login ID"
               />
@@ -229,8 +229,8 @@ const UserFormModal = ({
                 value={formData.password}
                 onChange={handleChange}
                 className={`w-full py-2 pl-10 pr-3 bg-white/50 backdrop-blur-md border rounded-lg focus:ring-2 focus:outline-none transition-all duration-200 ${errors.password
-                    ? "border-red-300 focus:ring-red-200"
-                    : "border-blue-200 focus:ring-blue-200"
+                  ? "border-red-300 focus:ring-red-200"
+                  : "border-blue-200 focus:ring-blue-200"
                   }`}
                 placeholder={editUser ? "Enter new password" : "Enter password"}
               />
@@ -240,8 +240,8 @@ const UserFormModal = ({
             )}
           </div>
 
-          {/* Permissions Section - Only visible to Super Admin */}
-          {isSuperAdmin && (
+          {/* Permissions Section - Only visible to Super Admin and not when editing a Super Admin */}
+          {isSuperAdmin && !editUser?.is_Super && (
             <div className="mb-6">
               <h3 className="flex items-center text-blue-700 font-medium mb-3">
                 <CheckSquare size={16} className="mr-2" />
