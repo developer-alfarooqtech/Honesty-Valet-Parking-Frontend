@@ -65,8 +65,17 @@ const UserFormModal = ({
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = "Name is required";
     if (!formData.loginId.trim()) newErrors.loginId = "Login ID is required";
-    if (!editUser && !formData.password.trim())
-      newErrors.password = "Password is required";
+
+    const password = formData.password.trim();
+    if (!editUser) {
+      if (!password) {
+        newErrors.password = "Password is required";
+      } else if (password.length < 4) {
+        newErrors.password = "Password must be at least 4 characters";
+      }
+    } else if (password && password.length < 4) {
+      newErrors.password = "Password must be at least 4 characters";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -95,13 +104,19 @@ const UserFormModal = ({
 
     if (!validate()) return;
 
+    const dataToSubmit = {
+      ...formData,
+      name: formData.name.trim(),
+      loginId: formData.loginId.trim(),
+      password: formData.password.trim(),
+    };
+
     if (editUser) {
       // Only include password if it's been entered
-      const userData = { ...formData };
-      if (!userData.password) delete userData.password;
-      onSubmit(editUser._id, userData);
+      if (!dataToSubmit.password) delete dataToSubmit.password;
+      onSubmit(editUser._id, dataToSubmit);
     } else {
-      onSubmit(formData);
+      onSubmit(dataToSubmit);
     }
   };
 
@@ -153,11 +168,10 @@ const UserFormModal = ({
                 type="text"
                 value={formData.name}
                 onChange={handleChange}
-                className={`w-full py-2 pl-10 pr-3 bg-white/50 backdrop-blur-md border rounded-lg focus:ring-2 focus:outline-none transition-all duration-200 ${
-                  errors.name
+                className={`w-full py-2 pl-10 pr-3 bg-white/50 backdrop-blur-md border rounded-lg focus:ring-2 focus:outline-none transition-all duration-200 ${errors.name
                     ? "border-red-300 focus:ring-red-200"
                     : "border-blue-200 focus:ring-blue-200"
-                }`}
+                  }`}
                 placeholder="Enter full name"
               />
             </div>
@@ -183,11 +197,10 @@ const UserFormModal = ({
                 type="text"
                 value={formData.loginId}
                 onChange={handleChange}
-                className={`w-full py-2 pl-10 pr-3 bg-white/50 backdrop-blur-md border rounded-lg focus:ring-2 focus:outline-none transition-all duration-200 ${
-                  errors.loginId
+                className={`w-full py-2 pl-10 pr-3 bg-white/50 backdrop-blur-md border rounded-lg focus:ring-2 focus:outline-none transition-all duration-200 ${errors.loginId
                     ? "border-red-300 focus:ring-red-200"
                     : "border-blue-200 focus:ring-blue-200"
-                }`}
+                  }`}
                 placeholder="Enter login ID"
               />
             </div>
@@ -215,11 +228,10 @@ const UserFormModal = ({
                 type="password"
                 value={formData.password}
                 onChange={handleChange}
-                className={`w-full py-2 pl-10 pr-3 bg-white/50 backdrop-blur-md border rounded-lg focus:ring-2 focus:outline-none transition-all duration-200 ${
-                  errors.password
+                className={`w-full py-2 pl-10 pr-3 bg-white/50 backdrop-blur-md border rounded-lg focus:ring-2 focus:outline-none transition-all duration-200 ${errors.password
                     ? "border-red-300 focus:ring-red-200"
                     : "border-blue-200 focus:ring-blue-200"
-                }`}
+                  }`}
                 placeholder={editUser ? "Enter new password" : "Enter password"}
               />
             </div>
@@ -261,11 +273,10 @@ const UserFormModal = ({
               type="submit"
               disabled={isLoading}
               className={`flex items-center justify-center gap-2 py-2 px-6 rounded-lg transition-all duration-300 shadow-md
-    ${
-      isLoading
-        ? "bg-blue-300 cursor-not-allowed opacity-60"
-        : "bg-blue-500 hover:bg-blue-600 text-white"
-    }`}
+    ${isLoading
+                  ? "bg-blue-300 cursor-not-allowed opacity-60"
+                  : "bg-blue-500 hover:bg-blue-600 text-white"
+                }`}
             >
               {isLoading ? (
                 editUser ? (
