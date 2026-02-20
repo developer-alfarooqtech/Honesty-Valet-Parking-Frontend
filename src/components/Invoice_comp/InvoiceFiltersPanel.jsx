@@ -43,8 +43,12 @@ const InvoiceFiltersPanel = ({
   handleDownloadExcel,
   exportingPDF,
   exportingExcel,
+  exportingExcel,
+  lpoSearchTerm,
+  setLpoSearchTerm,
 }) => {
   const hasActiveFilters =
+    lpoSearchTerm ||
     startDate ||
     endDate ||
     showOverdueOnly ||
@@ -58,6 +62,7 @@ const InvoiceFiltersPanel = ({
   const getActiveFiltersText = () => {
     const filters = [];
     if (searchTerm) filters.push(`Search: "${searchTerm}"`);
+    if (lpoSearchTerm) filters.push(`LPO: "${lpoSearchTerm}"`);
     if (selectedCustomers?.length) {
       const names = selectedCustomers.map((cust) => cust.name).join(", ");
       filters.push(`Customers: ${names}`);
@@ -72,7 +77,7 @@ const InvoiceFiltersPanel = ({
     if (showCancelledOnly) filters.push("Cancelled Only");
     if (lpoFilter === 'with') filters.push("With LPO");
     if (lpoFilter === 'without') filters.push("Without LPO");
-    
+
     return filters.length > 0 ? filters.join(", ") : "No filters applied";
   };
 
@@ -186,7 +191,7 @@ const InvoiceFiltersPanel = ({
           </div>
 
           {/* Date Range Filters */}
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-3">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Date Range
             </label>
@@ -217,6 +222,32 @@ const InvoiceFiltersPanel = ({
                   placeholder="End Date"
                 />
               </div>
+            </div>
+          </div>
+
+
+
+          {/* LPO Search */}
+          <div className="lg:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Search LPO
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={lpoSearchTerm}
+                onChange={(e) => setLpoSearchTerm(e.target.value)}
+                placeholder="LPO number..."
+                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-700 placeholder-gray-400 text-sm"
+              />
+              {lpoSearchTerm && (
+                <button
+                  onClick={() => setLpoSearchTerm("")}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -302,14 +333,12 @@ const InvoiceFiltersPanel = ({
                 <div className="ml-3 flex items-center">
                   <Clock
                     size={16}
-                    className={`mr-2 ${
-                      showOverdueOnly ? "text-red-500" : "text-gray-400"
-                    }`}
+                    className={`mr-2 ${showOverdueOnly ? "text-red-500" : "text-gray-400"
+                      }`}
                   />
                   <span
-                    className={`text-sm font-medium ${
-                      showOverdueOnly ? "text-red-600" : "text-gray-700"
-                    }`}
+                    className={`text-sm font-medium ${showOverdueOnly ? "text-red-600" : "text-gray-700"
+                      }`}
                   >
                     Overdue
                   </span>
@@ -330,14 +359,12 @@ const InvoiceFiltersPanel = ({
                 <div className="ml-3 flex items-center">
                   <Clock
                     size={16}
-                    className={`mr-2 ${
-                      showPendingOnly ? "text-yellow-500" : "text-gray-400"
-                    }`}
+                    className={`mr-2 ${showPendingOnly ? "text-yellow-500" : "text-gray-400"
+                      }`}
                   />
                   <span
-                    className={`text-sm font-medium ${
-                      showPendingOnly ? "text-yellow-600" : "text-gray-700"
-                    }`}
+                    className={`text-sm font-medium ${showPendingOnly ? "text-yellow-600" : "text-gray-700"
+                      }`}
                   >
                     Pending
                   </span>
@@ -358,14 +385,12 @@ const InvoiceFiltersPanel = ({
                 <div className="ml-3 flex items-center">
                   <CheckSquare
                     size={16}
-                    className={`mr-2 ${
-                      showPaymentClearedOnly ? "text-green-500" : "text-gray-400"
-                    }`}
+                    className={`mr-2 ${showPaymentClearedOnly ? "text-green-500" : "text-gray-400"
+                      }`}
                   />
                   <span
-                    className={`text-sm font-medium ${
-                      showPaymentClearedOnly ? "text-green-600" : "text-gray-700"
-                    }`}
+                    className={`text-sm font-medium ${showPaymentClearedOnly ? "text-green-600" : "text-gray-700"
+                      }`}
                   >
                     Fully Paid
                   </span>
@@ -386,14 +411,12 @@ const InvoiceFiltersPanel = ({
                 <div className="ml-3 flex items-center">
                   <X
                     size={16}
-                    className={`mr-2 ${
-                      showCancelledOnly ? "text-gray-500" : "text-gray-400"
-                    }`}
+                    className={`mr-2 ${showCancelledOnly ? "text-gray-500" : "text-gray-400"
+                      }`}
                   />
                   <span
-                    className={`text-sm font-medium ${
-                      showCancelledOnly ? "text-gray-600" : "text-gray-700"
-                    }`}
+                    className={`text-sm font-medium ${showCancelledOnly ? "text-gray-600" : "text-gray-700"
+                      }`}
                   >
                     Cancelled
                   </span>
@@ -404,146 +427,161 @@ const InvoiceFiltersPanel = ({
         </div>
 
         {/* Active Filters Summary */}
-        {(startDate ||
-          endDate ||
-          showOverdueOnly ||
-          showPaymentClearedOnly ||
-          showPendingOnly ||
-          showCancelledOnly ||
-          lpoFilter !== 'all' ||
-          (selectedCustomers && selectedCustomers.length > 0) ||
-          selectedCustomer ||
-          searchTerm) && (
-          <div className="mt-6 pt-4 border-t border-gray-200">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-700">
-                Active Filters:
-              </span>
-              <span className="text-xs text-gray-500">
-                {invoices.length} result
-                {invoices.length !== 1 ? "s" : ""} found
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {searchTerm && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
-                  <Search size={12} className="mr-1" />
-                  Search: "{searchTerm}"
-                  <button
-                    onClick={() => setSearchTerm("")}
-                    className="ml-2 hover:text-blue-800"
-                  >
-                    <X size={12} />
-                  </button>
+        {
+          (startDate ||
+            endDate ||
+            showOverdueOnly ||
+            showPaymentClearedOnly ||
+            showPendingOnly ||
+            showCancelledOnly ||
+            lpoFilter !== 'all' ||
+            (selectedCustomers && selectedCustomers.length > 0) ||
+            selectedCustomer ||
+            searchTerm) && (
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-gray-700">
+                  Active Filters:
                 </span>
-              )}
-              {selectedCustomers?.length > 0 ? (
-                selectedCustomers.map((customer) => {
-                  const displayLabel = customer.Code || customer.code || customer.name;
-                  return (
-                  <span
-                    key={customer._id}
-                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200"
-                  >
-                     {displayLabel}
+                <span className="text-xs text-gray-500">
+                  {invoices.length} result
+                  {invoices.length !== 1 ? "s" : ""} found
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {searchTerm && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                    <Search size={12} className="mr-1" />
+                    Search: "{searchTerm}"
                     <button
-                      onClick={() => handleRemoveCustomerFilter?.(customer._id)}
+                      onClick={() => setSearchTerm("")}
                       className="ml-2 hover:text-blue-800"
                     >
                       <X size={12} />
                     </button>
                   </span>
-                )})
-              ) : (
-                selectedCustomer && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
-                  Customer: {selectedCustomer.name}
-                  <button
-                    onClick={handleClearCustomer}
-                    className="ml-2 hover:text-blue-800"
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-                )
-              )}
-              {startDate && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200">
-                  <Calendar size={12} className="mr-1" />
-                  From: {new Date(startDate).toLocaleDateString("en-GB")}
-                  <button
-                    onClick={() => setStartDate("")}
-                    className="ml-2 hover:text-purple-800"
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              )}
-              {endDate && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200">
-                  <Calendar size={12} className="mr-1" />
-                  To: {new Date(endDate).toLocaleDateString("en-GB")}
-                  <button
-                    onClick={() => setEndDate("")}
-                    className="ml-2 hover:text-purple-800"
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              )}
-              {showOverdueOnly && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200">
-                  <Clock size={12} className="mr-1" />
-                  Overdue
-                  <button
-                    onClick={() => setShowOverdueOnly(false)}
-                    className="ml-2 hover:text-red-800"
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              )}
-              {showPaymentClearedOnly && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
-                  <CheckSquare size={12} className="mr-1" />
-                  Fully Paid
-                  <button
-                    onClick={() => setShowPaymentClearedOnly(false)}
-                    className="ml-2 hover:text-green-800"
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              )}
-              {showPendingOnly && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 border border-yellow-200">
-                  <Clock size={12} className="mr-1" />
-                  Pending
-                  <button
-                    onClick={() => setShowPendingOnly(false)}
-                    className="ml-2 hover:text-yellow-800"
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              )}
-              {showCancelledOnly && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
-                  <X size={12} className="mr-1" />
-                  Cancelled
-                  <button
-                    onClick={() => setShowCancelledOnly(false)}
-                    className="ml-2 hover:text-gray-800"
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              )}
+                )}
+                {lpoSearchTerm && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                    <FileText size={12} className="mr-1" />
+                    LPO: "{lpoSearchTerm}"
+                    <button
+                      onClick={() => setLpoSearchTerm("")}
+                      className="ml-2 hover:text-blue-800"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+                {selectedCustomers?.length > 0 ? (
+                  selectedCustomers.map((customer) => {
+                    const displayLabel = customer.Code || customer.code || customer.name;
+                    return (
+                      <span
+                        key={customer._id}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200"
+                      >
+                        {displayLabel}
+                        <button
+                          onClick={() => handleRemoveCustomerFilter?.(customer._id)}
+                          className="ml-2 hover:text-blue-800"
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    )
+                  })
+                ) : (
+                  selectedCustomer && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                      Customer: {selectedCustomer.name}
+                      <button
+                        onClick={handleClearCustomer}
+                        className="ml-2 hover:text-blue-800"
+                      >
+                        <X size={12} />
+                      </button>
+                    </span>
+                  )
+                )}
+                {startDate && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200">
+                    <Calendar size={12} className="mr-1" />
+                    From: {new Date(startDate).toLocaleDateString("en-GB")}
+                    <button
+                      onClick={() => setStartDate("")}
+                      className="ml-2 hover:text-purple-800"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+                {endDate && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200">
+                    <Calendar size={12} className="mr-1" />
+                    To: {new Date(endDate).toLocaleDateString("en-GB")}
+                    <button
+                      onClick={() => setEndDate("")}
+                      className="ml-2 hover:text-purple-800"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+                {showOverdueOnly && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200">
+                    <Clock size={12} className="mr-1" />
+                    Overdue
+                    <button
+                      onClick={() => setShowOverdueOnly(false)}
+                      className="ml-2 hover:text-red-800"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+                {showPaymentClearedOnly && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+                    <CheckSquare size={12} className="mr-1" />
+                    Fully Paid
+                    <button
+                      onClick={() => setShowPaymentClearedOnly(false)}
+                      className="ml-2 hover:text-green-800"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+                {showPendingOnly && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 border border-yellow-200">
+                    <Clock size={12} className="mr-1" />
+                    Pending
+                    <button
+                      onClick={() => setShowPendingOnly(false)}
+                      className="ml-2 hover:text-yellow-800"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+                {showCancelledOnly && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                    <X size={12} className="mr-1" />
+                    Cancelled
+                    <button
+                      onClick={() => setShowCancelledOnly(false)}
+                      className="ml-2 hover:text-gray-800"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
-    </div>
+          )
+        }
+      </div >
+    </div >
   );
 };
 

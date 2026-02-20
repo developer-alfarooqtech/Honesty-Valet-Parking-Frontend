@@ -22,12 +22,16 @@ export const fetchAllInvoices = async ({
   paymentClearedOnly,
   sort = 'newest',
   customerId = "",
-  customerIds = [],  withLpoOnly = false,
-  withoutLpoOnly = false,}) => {
+  customerIds = [],
+  withLpoOnly = false,
+  withoutLpoOnly = false,
+  debouncedLpoSearchTerm,
+}) => {
   const params = new URLSearchParams({
     page: currentPage,
     limit,
     search: debouncedSearchTerm || "",
+    lpoSearch: debouncedLpoSearchTerm || "",
     startDate: startDate || "",
     endDate: endDate || "",
     overdueOnly,
@@ -57,10 +61,14 @@ export const downloadInvoices = async ({
   cancelledOnly,
   sort = 'newest',
   customerId = "",
-  customerIds = [],  withLpoOnly = false,
-  withoutLpoOnly = false,}) => {
+  customerIds = [],
+  withLpoOnly = false,
+  withoutLpoOnly = false,
+  debouncedLpoSearchTerm,
+}) => {
   const params = new URLSearchParams({
     search: debouncedSearchTerm || "",
+    lpoSearch: debouncedLpoSearchTerm || "",
     startDate: startDate || "",
     endDate: endDate || "",
     overdueOnly,
@@ -92,15 +100,15 @@ export const updateInvoiceExpDate = async (invoiceId, newExpDate) => {
   return await api.post("/update-invoice-expdate", { invoiceId, newExpDate });
 };
 
-export const updateItemDescription  = async (invoiceId, itemId, itemType, newDescription) => {
-  return await api.put("/update-description", { invoiceId, itemId, itemType, newDescription});
+export const updateItemDescription = async (invoiceId, itemId, itemType, newDescription) => {
+  return await api.put("/update-description", { invoiceId, itemId, itemType, newDescription });
 };
 
 export const fetchCustomersBySearch = async (searchTerm) => {
   return await api.get(`/customers/search?term=${searchTerm}`);
 };
 
-export const fetchInvoiceStats  = async ({customerId, customerIds = [], signal}) => {
+export const fetchInvoiceStats = async ({ customerId, customerIds = [], signal }) => {
   const params = new URLSearchParams();
   if (customerId) {
     params.append("customerId", customerId);
@@ -138,5 +146,5 @@ export const uploadInvoicesFile = async (formData, onUploadProgress) => {
     onUploadProgress,
     timeout: 120000,
   });
-}; 
+};
 

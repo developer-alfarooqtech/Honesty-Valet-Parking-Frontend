@@ -112,8 +112,10 @@ const Invoices = () => {
     setShowCancelledOnly,
     lpoFilter,
     setLpoFilter,
-  sortOrder,
-  setSortOrder,
+    sortOrder,
+    setSortOrder,
+    lpoSearchTerm,
+    setLpoSearchTerm,
     // Functions
     calculateTotal,
     downloadPdf,
@@ -297,6 +299,8 @@ const Invoices = () => {
             setLpoFilter={setLpoFilter}
             sortOrder={sortOrder}
             setSortOrder={setSortOrder}
+            lpoSearchTerm={lpoSearchTerm}
+            setLpoSearchTerm={setLpoSearchTerm}
             invoices={invoices}
             resetFilters={resetFilters}
             downloadPdf={downloadPdf}
@@ -348,11 +352,10 @@ const Invoices = () => {
                     }
                   }}
                   disabled={printingInvoices}
-                  className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
-                    !printingInvoices
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${!printingInvoices
                       ? "bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg"
                       : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  }`}
+                    }`}
                   title="Print selected invoices"
                 >
                   <Printer size={18} />

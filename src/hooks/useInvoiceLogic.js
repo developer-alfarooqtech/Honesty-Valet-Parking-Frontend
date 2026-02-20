@@ -24,6 +24,7 @@ export const useInvoiceLogic = () => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [lpoSearchTerm, setLpoSearchTerm] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -107,6 +108,7 @@ export const useInvoiceLogic = () => {
   const noteInputRefs = useRef({});
 
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
+  const debouncedLpoSearchTerm = useDebounce(lpoSearchTerm, 500);
 
   const duplicateGuard = useMemo(() => {
     if (!isDuplicateMode || !duplicateSourceInvoice) {
@@ -141,11 +143,11 @@ export const useInvoiceLogic = () => {
     if (!dateString) return "";
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return "";
-    
+
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
-    
+
     return `${day}/${month}/${year}`;
   };
 
@@ -164,7 +166,7 @@ export const useInvoiceLogic = () => {
       (sum, credit) => sum + (credit.amount || 0),
       0
     );
-    
+
     // Return gross amount minus credits (same logic as in handleCreateInvoice)
     return (productTotal + serviceTotal) - creditTotal;
   };
@@ -178,6 +180,7 @@ export const useInvoiceLogic = () => {
   const getActiveFiltersText = () => {
     const filters = [];
     if (searchTerm) filters.push(`Search: "${searchTerm}"`);
+    if (lpoSearchTerm) filters.push(`LPO: "${lpoSearchTerm}"`);
     if (selectedCustomers.length > 0) {
       const names = selectedCustomers.map((cust) => cust.name).join(", ");
       filters.push(`Customers: ${names}`);
@@ -190,7 +193,7 @@ export const useInvoiceLogic = () => {
     if (showPaymentClearedOnly) filters.push("Fully Paid Only");
     if (showPendingOnly) filters.push("Pending Only");
     if (showCancelledOnly) filters.push("Cancelled Only");
-    
+
     return filters.length > 0 ? filters.join(", ") : "No filters applied";
   };
 
@@ -204,6 +207,7 @@ export const useInvoiceLogic = () => {
     loadBanks();
   }, [
     debouncedSearchTerm,
+    debouncedLpoSearchTerm,
     currentPage,
     startDate,
     endDate,
@@ -236,13 +240,13 @@ export const useInvoiceLogic = () => {
       const customerId = selectedCustomerIds.length === 0 ? selectedCustomer?._id || "" : "";
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 25000);
-      
-      const response = await fetchInvoiceStats({ 
+
+      const response = await fetchInvoiceStats({
         customerId,
         customerIds: selectedCustomerIds,
-        signal: controller.signal 
+        signal: controller.signal
       });
-      
+
       clearTimeout(timeoutId);
       const data = await response.data;
 
@@ -261,7 +265,7 @@ export const useInvoiceLogic = () => {
       }
     } catch (error) {
       console.error("Error fetching invoice stats:", error);
-      
+
       if (error.name !== 'AbortError' && error.code !== 'ECONNABORTED') {
         toast.error("Failed to load statistics. Using default values.", {
           duration: 3000,
@@ -273,7 +277,7 @@ export const useInvoiceLogic = () => {
           position: 'top-right'
         });
       }
-      
+
       setInvoiceStats({
         totalOutstanding: 0,
         overdueAmount: 0,
@@ -294,6 +298,7 @@ export const useInvoiceLogic = () => {
         currentPage,
         limit,
         debouncedSearchTerm,
+        debouncedLpoSearchTerm,
         startDate,
         endDate,
         overdueOnly: showOverdueOnly,
@@ -338,6 +343,7 @@ export const useInvoiceLogic = () => {
       setExportingExcel(true);
       const response = await downloadInvoices({
         debouncedSearchTerm,
+        debouncedLpoSearchTerm,
         startDate,
         endDate,
         overdueOnly: showOverdueOnly,
@@ -365,6 +371,7 @@ export const useInvoiceLogic = () => {
         try {
           const creditNoteResponse = await downloadCreditNotes({
             debouncedSearchTerm,
+            debouncedLpoSearchTerm,
             startDate,
             endDate,
             showProcessedOnly: false,
@@ -505,8 +512,8 @@ export const useInvoiceLogic = () => {
               inv.isPaymentCleared
                 ? "Fully Paid"
                 : isExpired(inv.expDate)
-                ? "Overdue"
-                : "Pending",
+                  ? "Overdue"
+                  : "Pending",
           });
           return;
         }
@@ -539,8 +546,8 @@ export const useInvoiceLogic = () => {
             inv.isPaymentCleared
               ? "Fully Paid"
               : isExpired(inv.expDate)
-              ? "Overdue"
-              : "Pending",
+                ? "Overdue"
+                : "Pending",
         });
       });
 
@@ -548,25 +555,25 @@ export const useInvoiceLogic = () => {
       if (showPendingOnly && creditNotes.length > 0) {
         creditNotes.forEach((cn) => {
           const items = cn.items || [];
-          const itemNotes = items.length > 0 
+          const itemNotes = items.length > 0
             ? items.map(item => {
-                const itemName = item.name || item.product?.name || item.service?.name || "";
-                const itemNote = item.note || "";
-                if (itemName && itemNote) {
-                  return `${itemName}: ${itemNote}`;
-                } else if (itemName) {
-                  return itemName;
-                } else if (itemNote) {
-                  return itemNote;
-                }
-                return "";
-              }).filter(n => n && n.trim()).join(", ") 
+              const itemName = item.name || item.product?.name || item.service?.name || "";
+              const itemNote = item.note || "";
+              if (itemName && itemNote) {
+                return `${itemName}: ${itemNote}`;
+              } else if (itemName) {
+                return itemName;
+              } else if (itemNote) {
+                return itemNote;
+              }
+              return "";
+            }).filter(n => n && n.trim()).join(", ")
             : "N/A";
-          const itemCodes = items.length > 0 
-            ? items.map(item => item.product?.code || item.service?.code || "").filter(c => c).join(", ") 
+          const itemCodes = items.length > 0
+            ? items.map(item => item.product?.code || item.service?.code || "").filter(c => c).join(", ")
             : "N/A";
-          const quantities = items.length > 0 
-            ? items.map(item => item.creditedQuantity || 0).join(", ") 
+          const quantities = items.length > 0
+            ? items.map(item => item.creditedQuantity || 0).join(", ")
             : "N/A";
 
           worksheetData.push({
@@ -710,10 +717,11 @@ export const useInvoiceLogic = () => {
   const downloadPdf = async () => {
     try {
       setExportingPDF(true);
-      
+
       // Fetch invoices with current filters
       const response = await downloadInvoices({
         debouncedSearchTerm,
+        debouncedLpoSearchTerm,
         startDate,
         endDate,
         overdueOnly: showOverdueOnly,
@@ -726,7 +734,7 @@ export const useInvoiceLogic = () => {
       });
 
       let invoicesData = response.data.invoices || [];
-      
+
       if (invoicesData.length === 0) {
         toast.error("No invoices found with current filters");
         return;
@@ -750,7 +758,7 @@ export const useInvoiceLogic = () => {
 
       // Generate PDF using the new component
       await downloadInvoicesAsPDF(detailedInvoices, setExportingPDF);
-      
+
     } catch (error) {
       console.error("PDF download failed:", error);
       toast.error("Failed to download PDF: " + (error.message || "Unknown error"));
@@ -766,6 +774,7 @@ export const useInvoiceLogic = () => {
     invoices, setInvoices,
     loading, setLoading,
     searchTerm, setSearchTerm,
+    lpoSearchTerm, setLpoSearchTerm,
     selectedInvoice, setSelectedInvoice,
     currentPage, setCurrentPage,
     totalPages, setTotalPages,
@@ -785,13 +794,13 @@ export const useInvoiceLogic = () => {
     importingInvoices, setImportingInvoices,
     importProgress, setImportProgress,
     importSummary, setImportSummary,
-  selectedCustomerForInvoice, setSelectedCustomerForInvoice,
-  selectedProducts, setSelectedProducts,
-  selectedServices, setSelectedServices,
-  selectedCredits, setSelectedCredits,
-  invoiceDate, setInvoiceDate,
-  lpo, setLpo,
-  description, setDescription,
+    selectedCustomerForInvoice, setSelectedCustomerForInvoice,
+    selectedProducts, setSelectedProducts,
+    selectedServices, setSelectedServices,
+    selectedCredits, setSelectedCredits,
+    invoiceDate, setInvoiceDate,
+    lpo, setLpo,
+    description, setDescription,
     error, setError,
     vatRate, setVatRate,
     discount, setDiscount,
@@ -823,7 +832,7 @@ export const useInvoiceLogic = () => {
     pendingRowId, setPendingRowId,
     noteInputRefs,
     debouncedSearchTerm,
-  sortOrder, setSortOrder,
+    sortOrder, setSortOrder,
 
     // Functions
     isExpired,
