@@ -43,7 +43,6 @@ const InvoiceFiltersPanel = ({
   handleDownloadExcel,
   exportingPDF,
   exportingExcel,
-  exportingExcel,
   lpoSearchTerm,
   setLpoSearchTerm,
 }) => {
