@@ -1,21 +1,24 @@
 import api from "./axios-instance";
 
 // Fetch all credit notes with filters
-export const fetchAllCreditNotes = async ({
-  currentPage,
-  limit,
-  debouncedSearchTerm,
-  startDate,
-  endDate,
-  showProcessedOnly,
-  showPendingOnly,
-  showCancelledOnly,
-  customerId = "",
-  creditTypeFilter = "all", 
-}) => {
-  return await api.get(
-    `/credit-notes?page=${currentPage}&limit=${limit}&search=${debouncedSearchTerm}&startDate=${startDate}&endDate=${endDate}&processedOnly=${showProcessedOnly}&pendingOnly=${showPendingOnly}&cancelledOnly=${showCancelledOnly}&customerId=${customerId}&creditType=${creditTypeFilter}`
-  );
+export const fetchAllCreditNotes = async (params) => {
+  // Map legacy keys if necessary or just pass everything
+  const queryParams = {
+    page: params.currentPage || 1,
+    limit: params.limit || 10,
+    search: params.debouncedSearchTerm || params.search || "",
+    startDate: params.startDate || "",
+    endDate: params.endDate || "",
+    processedOnly: params.showProcessedOnly,
+    pendingOnly: params.showPendingOnly,
+    cancelledOnly: params.showCancelledOnly,
+    status: params.status, // Add direct status support
+    customerId: params.customerId || "",
+    creditType: params.creditTypeFilter || params.creditType || "all",
+    hasRemainingBalance: params.hasRemainingBalance
+  };
+
+  return await api.get("/credit-notes", { params: queryParams });
 };
 
 // Download credit notes report
@@ -84,7 +87,7 @@ export const fetchInvoicesForCreditNote = async (searchTerm, customerId = "") =>
   const params = new URLSearchParams();
   params.append('search', searchTerm);
   if (customerId) params.append('customerId', customerId);
-  
+
   return await api.get(`/get-invoices?${params.toString()}&limit=50&page=1`);
 };
 

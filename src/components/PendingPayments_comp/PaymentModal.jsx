@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { X, Calendar, CreditCard, DollarSign } from "lucide-react";
+import { X, Calendar, CreditCard, DollarSign, FileText, Trash2 } from "lucide-react";
 import { fetchAllBanks } from "../../service/bankServices";
 import { applyPayment } from "../../service/pendingPaymentsService";
 import toast from "react-hot-toast";
+import CreditNoteSelectionModal from "./CreditNoteSelectionModal";
 
 const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
   const [bankAccounts, setBankAccounts] = useState([]);
@@ -17,6 +18,10 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [hasManualReceivedAmount, setHasManualReceivedAmount] = useState(false);
+
+  // Credit Note Deductions State
+  const [creditNoteDeductions, setCreditNoteDeductions] = useState([]);
+  const [showCreditNoteModal, setShowCreditNoteModal] = useState(false);
 
   const paymentsTotal = useMemo(() => {
     return payments.reduce(
@@ -41,12 +46,15 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
     ? Math.min(parsedBalanceDeduction, safeMaxBalanceUsage)
     : 0;
 
+  // Calculate totals
+  const totalCreditNoteDeduction = creditNoteDeductions.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+
   const parsedReceivedAmount = (() => {
     const numeric = parseFloat(receivedAmount || "0");
     return Number.isNaN(numeric) ? 0 : Math.max(0, numeric);
   })();
 
-  const totalCoverage = parsedReceivedAmount + clampedBalanceDeduction;
+  const totalCoverage = parsedReceivedAmount + clampedBalanceDeduction + totalCreditNoteDeduction;
   const excessAmount = Math.max(0, totalCoverage - paymentsTotal);
   const remainingAmount = Math.max(0, paymentsTotal - totalCoverage);
   const projectedBalanceAfter = Math.max(
@@ -55,14 +63,14 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
   );
   const cashAppliedToInvoices = Math.max(
     0,
-    paymentsTotal - clampedBalanceDeduction
+    paymentsTotal - clampedBalanceDeduction - totalCreditNoteDeduction
   );
   const coverageValid = remainingAmount < 0.01;
   const disableSubmit =
     submitting ||
     loading ||
     payments.length === 0 ||
-    !selectedBankAccount ||
+    (!selectedBankAccount && (cashAppliedToInvoices > 0 || parsedReceivedAmount > 0)) ||
     !paymentDate ||
     !coverageValid;
 
@@ -71,7 +79,7 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
   }, []);
 
   const computeAutoReceivedAmount = () => {
-    const autoAmount = Math.max(0, paymentsTotal - clampedBalanceDeduction);
+    const autoAmount = cashAppliedToInvoices;
     if (autoAmount === 0) {
       return "";
     }
@@ -83,7 +91,7 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
       return;
     }
     setReceivedAmount(computeAutoReceivedAmount());
-  }, [paymentsTotal, clampedBalanceDeduction, hasManualReceivedAmount]);
+  }, [paymentsTotal, clampedBalanceDeduction, totalCreditNoteDeduction, hasManualReceivedAmount]);
 
   useEffect(() => {
     if (!useCustomerBalance || !balanceDeduction) return;
@@ -139,6 +147,46 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
     setHasManualReceivedAmount(false);
   };
 
+  const handleCreditNoteSelect = (selectedNotes) => {
+    let currentRemaining = Math.max(0, paymentsTotal - totalCreditNoteDeduction);
+
+    const newDeductions = [...creditNoteDeductions];
+
+    selectedNotes.forEach(note => {
+      // Check if already added
+      if (newDeductions.some(d => d._id === note._id)) return;
+
+      const amountToUse = Math.min(Number(note.remainingBalance), currentRemaining);
+      currentRemaining = Math.max(0, currentRemaining - amountToUse);
+
+      newDeductions.push({
+        ...note,
+        amount: amountToUse > 0 ? amountToUse.toFixed(2) : "" // Pre-fill valid amounts
+      });
+    });
+
+    setCreditNoteDeductions(newDeductions);
+  };
+
+  const handleDeductionChange = (id, value) => {
+    const newDeductions = creditNoteDeductions.map(item => {
+      if (item._id === id) {
+        const val = parseFloat(value);
+        if (!isNaN(val) && val > item.remainingBalance) {
+          toast.error(`Amount cannot exceed credit note balance (${item.remainingBalance})`);
+          return item;
+        }
+        return { ...item, amount: value };
+      }
+      return item;
+    });
+    setCreditNoteDeductions(newDeductions);
+  };
+
+  const removeDeduction = (id) => {
+    setCreditNoteDeductions(creditNoteDeductions.filter(item => item._id !== id));
+  };
+
   const handleUseFullBalance = () => {
     if (!useCustomerBalance) {
       setUseCustomerBalance(true);
@@ -157,7 +205,7 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!selectedBankAccount) {
+    if (!selectedBankAccount && (cashAppliedToInvoices > 0 || parsedReceivedAmount > 0)) {
       toast.error("Please select a bank account");
       return;
     }
@@ -176,6 +224,29 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
       toast.error(
         "Received amount plus balance deduction must cover the selected invoices"
       );
+      return;
+    }
+
+    // Validate Credit Note Amounts
+    for (const cn of creditNoteDeductions) {
+      const amt = parseFloat(cn.amount);
+      if (isNaN(amt) || amt <= 0) {
+        toast.error(`Please enter a valid amount for Credit Note ${cn.creditNoteNumber}`);
+        return;
+      }
+      if (amt > cn.remainingBalance) {
+        toast.error(`Amount for Credit Note ${cn.creditNoteNumber} exceeds balance`);
+        return;
+      }
+    }
+
+    if (totalCreditNoteDeduction > paymentsTotal + 0.001) {
+      toast.error(`Credit note deduction (${totalCreditNoteDeduction.toFixed(2)}) cannot exceed total payment amount (${paymentsTotal.toFixed(2)})`);
+      return;
+    }
+
+    if (totalCreditNoteDeduction + clampedBalanceDeduction > paymentsTotal + 0.001) {
+      toast.error(`Deductions cannot exceed total payment amount`);
       return;
     }
 
@@ -203,6 +274,11 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
         balanceDeductionAmount: Number(clampedBalanceDeduction.toFixed(2)),
         deductFromCustomerBalance: clampedBalanceDeduction > 0,
         excessAmount: Number(excessAmount.toFixed(2)),
+        creditNoteDeductions: creditNoteDeductions.map(cn => ({
+          _id: cn._id,
+          amount: parseFloat(cn.amount),
+          creditNoteNumber: cn.creditNoteNumber
+        }))
       });
 
       const data = await response.data;
@@ -246,6 +322,57 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
                 Payment Details
               </h3>
 
+              {/* Credit Note Deductions Section */}
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Deduct from Credit Notes
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreditNoteModal(true)}
+                    className="text-sm text-slate-600 hover:text-slate-800 font-medium"
+                  >
+                    + Add Credit Note
+                  </button>
+                </div>
+
+                {creditNoteDeductions.length > 0 && (
+                  <div className="bg-white border rounded-md divide-y">
+                    {creditNoteDeductions.map((cn) => (
+                      <div key={cn._id} className="p-3 flex items-center gap-3">
+                        <FileText size={16} className="text-gray-400" />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">{cn.creditNoteNumber}</div>
+                          <div className="text-xs text-green-600">Balance: {Number(cn.remainingBalance).toFixed(2)}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">Amount:</span>
+                          <input
+                            type="number"
+                            value={cn.amount}
+                            onChange={(e) => handleDeductionChange(cn._id, e.target.value)}
+                            className="w-24 p-1 text-right text-sm border rounded focus:ring-slate-500 focus:border-slate-500"
+                            placeholder="0.00"
+                            max={cn.remainingBalance}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeDeduction(cn._id)}
+                            className="text-red-400 hover:text-red-600 ml-2"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="p-2 bg-gray-50 text-right text-sm font-medium text-gray-700">
+                      Total Credit Deduction: {totalCreditNoteDeduction.toFixed(2)}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 {/* Bank Account */}
                 <div>
@@ -256,8 +383,8 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
                     <select
                       value={selectedBankAccount}
                       onChange={(e) => setSelectedBankAccount(e.target.value)}
-                      className="w-full p-3 pl-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
+                      className="w-full p-3 pl-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                      required={cashAppliedToInvoices > 0 || parsedReceivedAmount > 0}
                     >
                       <option value="">Select Bank Account</option>
                       {bankAccounts.map((account) => (
@@ -280,9 +407,9 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
                       type="date"
                       value={paymentDate}
                       onChange={(e) => setPaymentDate(e.target.value)}
-                      className="w-full p-3 pl-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 pl-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
                       required
-                    
+
                     />
                     <Calendar className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
                   </div>
@@ -300,7 +427,7 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
                       step="0.01"
                       value={receivedAmount}
                       onChange={(e) => handleReceivedAmountChange(e.target.value)}
-                      className="w-full p-3 pl-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 pl-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
                       placeholder="0.00"
                       required
                     />
@@ -308,7 +435,7 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
                     <button
                       type="button"
                       onClick={handleResetReceivedAmount}
-                      className="absolute right-3 top-2.5 text-xs font-semibold text-blue-600 hover:text-blue-800"
+                      className="absolute right-3 top-2.5 text-xs font-semibold text-slate-600 hover:text-slate-800"
                     >
                       Auto-fill
                     </button>
@@ -329,7 +456,7 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
                   value={globalDescription}
                   onChange={(e) => setGlobalDescription(e.target.value)}
                   placeholder="Enter description for all invoices..."
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
                 />
               </div>
 
@@ -344,7 +471,7 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
                     </div>
                     <div className="text-left md:text-right">
                       <p className="text-sm text-gray-500">Projected After Payment</p>
-                      <p className="text-2xl font-semibold text-blue-600">
+                      <p className="text-2xl font-semibold text-slate-600">
                         AED {projectedBalanceAfter.toFixed(2)}
                       </p>
                     </div>
@@ -354,7 +481,7 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
                     <label className="inline-flex items-center gap-2 text-sm text-gray-700">
                       <input
                         type="checkbox"
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="rounded border-gray-300 text-slate-600 focus:ring-slate-500"
                         checked={useCustomerBalance}
                         onChange={(e) => {
                           const checked = e.target.checked;
@@ -373,7 +500,7 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
                         type="button"
                         onClick={handleUseFullBalance}
                         disabled={safeMaxBalanceUsage === 0}
-                        className="text-blue-600 disabled:text-gray-400"
+                        className="text-slate-600 disabled:text-gray-400"
                       >
                         Use full balance
                       </button>
@@ -403,7 +530,7 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
                           onChange={(e) =>
                             handleBalanceDeductionChange(e.target.value)
                           }
-                          className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
                           placeholder="0.00"
                         />
                         <p className="text-xs text-gray-500 mt-1">
@@ -415,7 +542,7 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Balance After Payment</p>
-                        <p className="text-xl font-semibold text-blue-600">
+                        <p className="text-xl font-semibold text-slate-600">
                           AED {projectedBalanceAfter.toFixed(2)}
                         </p>
                       </div>
@@ -435,11 +562,17 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
               )}
 
               <div className="border border-gray-200 rounded-lg bg-white p-4 space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
                   <div>
                     <p className="text-gray-500">Total Selected</p>
                     <p className="text-lg font-semibold text-gray-900">
                       AED {paymentsTotal.toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Credit Notes</p>
+                    <p className="text-lg font-semibold text-gray-900">
+                      AED {totalCreditNoteDeduction.toFixed(2)}
                     </p>
                   </div>
                   <div>
@@ -546,7 +679,7 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
                             </div>
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <div className="text-sm font-medium text-blue-600">
+                            <div className="text-sm font-medium text-slate-600">
                               {(paymentData.amount || 0).toFixed(2)}
                             </div>
                           </td>
@@ -557,11 +690,10 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div
-                              className={`text-sm font-medium ${
-                                remaining <= 0
-                                  ? "text-green-600"
-                                  : "text-blue-600"
-                              }`}
+                              className={`text-sm font-medium ${remaining <= 0
+                                ? "text-green-600"
+                                : "text-slate-600"
+                                }`}
                             >
                               {Math.max(0, remaining).toFixed(2)}
                             </div>
@@ -576,7 +708,7 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
                         Total Payment Amount:
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="text-lg font-bold text-blue-600">
+                        <div className="text-lg font-bold text-slate-600">
                           {paymentsTotal.toFixed(2)}
                         </div>
                       </td>
@@ -593,7 +725,7 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-6 border-t border-gray-200 bg-gray-50">
           <div className="text-sm text-gray-700 space-y-1">
             <p className="text-lg font-semibold text-gray-900">
-              Total Selected: <span className="text-blue-600">AED {paymentsTotal.toFixed(2)}</span>
+              Total Selected: <span className="text-slate-600">AED {paymentsTotal.toFixed(2)}</span>
             </p>
             <p>
               Cash received AED {parsedReceivedAmount.toFixed(2)} • Balance used AED {clampedBalanceDeduction.toFixed(2)} • Excess AED {excessAmount.toFixed(2)}
@@ -603,14 +735,14 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={disableSubmit}
-              className="px-6 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-6 py-2 text-sm font-medium text-white bg-slate-600 border border-transparent rounded-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {submitting ? (
                 <>
@@ -627,6 +759,14 @@ const PaymentModal = ({ payments, customer, onClose, onSuccess }) => {
           </div>
         </div>
       </div>
+      {showCreditNoteModal && (
+        <CreditNoteSelectionModal
+          customer={customer}
+          onClose={() => setShowCreditNoteModal(false)}
+          onSelect={handleCreditNoteSelect}
+          selectedIds={creditNoteDeductions.map((cn) => cn._id)}
+        />
+      )}
     </div>
   );
 };
